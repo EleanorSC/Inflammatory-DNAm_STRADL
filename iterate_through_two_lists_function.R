@@ -249,7 +249,8 @@ newdf <- cbind(df, newcols) %>%
              TRUE ~ "Bilateral"
            )) %>%
   # Create pFDR column
-  group_by(metric, Hemisphere) %>%
+ # group_by(metric, Hemisphere) %>%
+  group_by(metric, Hemisphere, DNAm) %>%
   mutate(pFDR = p.adjust(p.value, method = "fdr")) %>%
   # Create a column to denote where there are significant hits 
   mutate(significance =
@@ -342,7 +343,6 @@ plot %<>%
       )
   )
 
-
 ### Plot based on significance so make a new column like is p > 0.05 then concat with protein
 
 plot %<>%
@@ -358,6 +358,97 @@ plot %<>%
                      TRUE ~ 1))
 
 # Group by sum using dplyr
-aggregate(plot$number_significant,
-          by = list(DNAm = plot$DNAm),
-          FUN = sum)
+top_significant_hits <- aggregate(plot$number_significant,
+                                  by = list(DNAm = plot$DNAm),
+                                  FUN = sum)
+
+top_significant_hits %<>% arrange(desc(x))
+
+
+plot$Hemisphere <- as.factor(plot$Hemisphere)
+plot2 <- plot %>% filter(Hemisphere == "Right" | Hemisphere == "Left")
+
+
+###### REORDER DNAm by no. sig
+plot2 %<>% mutate(DNAm = factor(
+  DNAm,
+  levels = c(
+    "SEMA3E",    "PIGR",      "SERPIND1",  "VEGFA",     "MMP12",     "MMP.1",     "NTRK3.x",   "SKR3",      "CCL11",    
+     "CRP",       "NCAM1",     "NTRK3.y",   "CCL17",     "CCL18",     "FGF.21",    "ICAM5",     "PRSS2",     "SLITRK5",  
+     "WFIKKN2",   "HGF",       "BCAM",      "IGFBP4",    "CNTN4",     "NOTCH1",    "OMD",       "TGF.alpha", "INSR",     
+     "SPOCK2",    "AFM",       "CXCL11.x",  "GDF.8",     "GZMA.y",    "SIGLEC1",   "ESM1",      "MMP9",      "EDA",      
+     "ACY1",      "C4A|C4B",   "CCL22",     "ENPP7",     "GZMA.x",    "IL19",      "NEP",       "SELL",      "LYZ",      
+     "MMP1",      "CD209",     "CD5L",      "CD6",       "SHBG",      "THBS2",     "CD48",      "EN.RAGE",   "F7",       
+     "LTA|LTB",   "MMP2",      "SELE",      "STC1",      "VCAM1",     "LTF",       "OSM",       "SERPINA3",  "ADAMTS13", 
+     "CRTAM",     "GNLY",      "LGALS3BP",  "LGALS4",    "MIA" ,      "NMNAT1",    "RARRES2",   "ADIPOQ",    "BMP1",     
+     "C9",        "CCL25",     "CLEC11A",   "CLEC11A.1", "CXCL9",     "FcRL2",     "G.CSF",     "MPO",       "TPSB2",   
+     "B2M",       "C5",        "CCL21",     "CD163",     "CHIT1",     "CXCL10.x",  "CXCL10.y",  "CXCL11.y",  "EZR",      
+     "FAP",       "FCER2",     "FCGR3B",    "GHR",       "GP1BA",     "HGFAC",     "IDUA",      "IGFBP1",    "LY9",      
+     "MPL",       "MRC2",      "MST1",      "N.CDase",   "PAPPA",     "RETN",      "S100A9",    "SMPD1",     "TNFRSF17", 
+     "TNFRSF1B")))
+
+
+
+##### Now as a point plot instead of barplot
+
+x <- ggplot(
+  plot2,
+  aes(
+    x = reorder(brain_var,-estimate),
+    y = estimate,
+    colour = significance,
+    group = Hemisphere,
+    shape = Hemisphere
+  )
+) +
+  
+  geom_point(position = position_dodge(width = 0.9),
+             size = 2.0,
+             stroke = 0.9) +
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.2,
+    colour = "darkgrey",
+    alpha = 0.9,
+    size = 0.8
+  ) +
+  
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  
+  coord_flip() +
+  #theme_bw() +
+  theme_classic() +
+  xlab("White matter tract FA") +
+  ylab("Standardised effect size") +
+  #scale_y_continuous(limits = c(-0.2, 0.2)) +
+  facet_wrap( ~ DNAm, nrow = 5)
+
+
+x +
+  theme(
+    axis.title.x = element_text(
+      size = 11,
+      face = "bold",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 9,
+                               colour = "black"),
+    axis.text.x = element_text(size = 6,
+                               colour = "black"),
+    axis.title.y = element_text(
+      size = 11,
+      face = "bold",
+      colour = "black"
+    )) +
+      scale_shape_manual(values = c(16,
+                                    1)) +
+      scale_colour_manual(values = c("darkgrey",
+                                    # "cornflowerblue"
+                                    # "#404788FF"
+                                    "#CC0A4E"))
+    
