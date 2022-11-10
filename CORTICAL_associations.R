@@ -729,3 +729,151 @@ ggplot(plot2,
 #+
 #  scale_alpha(range=c(0.8, 1)) 
 
+
+###################
+# REGRESSION PLOT 
+###################
+
+#### try out as a pheWAS
+plot2 <- plot_cortical_volumes
+
+#plot2 %<>% filter(brain_metric == "fusiform")
+
+plot2 %<>% filter(significance == "Yes" |
+                    FDR_significance == "Yes")
+
+plot2 %<>% filter(Hemisphere == "Bilateral")
+
+
+##### SHow less
+#
+#plot2 %<>% filter(brain_metric == "parahippocampal"|
+#                    brain_metric == "inferior temporal"|
+#                    brain_metric == "lateral occipital"|
+#                    brain_metric == "fusiform"|
+#                    brain_metric == "superior parietal"|
+#                    brain_metric == "middle temporal")
+
+
+
+###### REORDER DNAm by no. sig
+plot2 %<>% mutate(brain_metric = factor(
+  brain_metric,
+  levels = c(
+    
+    "parahippocampal", #42
+    "inferior temporal", #34
+    "fusiform", #33
+    "lateral occipital", #31
+    "supra marginal", #28
+    "lateral orbitofrontal", #27
+    "precentral", #26
+    "superior parietal", #25
+    "superior temporal", #24
+    "entorhinal", #23
+    "insula", #21
+    "middle temporal", #20
+    "postcentral", #20
+    "transverse temporal", #20
+    "lingual", #18
+    "rostral middle frontal", #18
+    "medial orbitofrontal", #17
+    "pars orbitalis", #17
+    "precuneus", #17
+    "rostral anterior cingulate", #16
+    "inferior parietal", #15
+    "posterior cingulate", #14
+    "banks of superior temporal sulcus", #11
+    "cuneus", #10
+    "pars opercularis", #10
+    "superior frontal", #10
+    "frontal pole", # 9
+    "isthmus cingulate", # 8
+    "temporal pole", # 8
+    "caudal middle frontal", # 6
+    "paracentral", # 5
+    "caudal anterior cingulate", # 3
+    "pars triangularis", # 3
+    "pericalcarine"))) # 1
+
+
+
+##### for effect sizes plot
+facetSettings <-
+  theme(strip.background = element_rect(
+    #fill = "#edf2fb",
+    #fill = "#FFFEFC",
+    fill = "#F8EEEC",
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(x = reorder(DNAm,-(estimate)),
+           y = estimate)) +
+  
+  geom_point(aes(
+    col = reorder(DNAm,
+                  (estimate)),
+    alpha = reorder(DNAm,
+                    (estimate)),
+    shape = FDR_significance
+  ),
+  size = 2) +
+  
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  
+  theme(
+    axis.text.x = element_text(#angle = 90,
+      #vjust = 0.5,
+      # hjust=1,
+      size = 6),
+    #axis.text.x = element_blank(),
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 7)
+  ) +
+  
+  labs(x = "",
+       y = "") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "lightgrey",
+    linetype = "dashed",
+    size = 0.3,
+    alpha = 0.5
+  ) +
+  
+  viridis::scale_color_viridis(discrete = TRUE,
+                               option = "A") +
+  scale_shape_manual(values = c(16,
+                                5)) +
+  facet_wrap( ~ brain_metric,
+              #scales="free"
+              scales = "free_y",
+              nrow = 5) +
+  facetSettings
+#+
+#  scale_alpha(range=c(0.8, 1))
+
