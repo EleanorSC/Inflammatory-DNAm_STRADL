@@ -73,9 +73,16 @@
 
 setwd("/Users/eleanorc_worklaptop/repos/STRADL_inflammatory_DNAm")
 
+## ----------------------------# 
+# install relevant packages
 
-# First load up demographics and phenotypes
-phenotypes_STRADL <- read.csv("phenotypes.csv")
+install.packages("tidyverse")
+install.packages("magrittr")
+
+## ----------------------------#
+
+
+# First load up ID linkages
 ID_link_attempt <- read.csv("STRADL_DNAm_target_REM_17April2020.csv")
 
 # Next load up methylation and proteomics data
@@ -171,16 +178,186 @@ STRADL_LBC <- merge(ID_link_attempt,
 # Remove columns we don't need
 STRADL_LBC <- STRADL_LBC[c(2,7:31)]
 
-# add DNAm to the end
-#colnames(STRADL_LBC) <- paste(colnames(STRADL_LBC),"DNAm",sep="_")
-
 # rename the ID columns 
 names(STRADL_LBC)[names(STRADL_LBC) == 'stradl_ID_DNAm'] <- 'stradl_ID'
 
-########
-# Merge KORA trained and STRADL_trained
-KORA_LBC_DNAm <- merge(STRADL_LBC, STRADL_KORA, by = "stradl_ID")
+# add DNAm to the end
+#colnames(STRADL_LBC) <- paste(colnames(STRADL_LBC),"DNAm",sep="_")
 
+## ----------------------------# 
+# Unique Olink signatures (n = 21), 
+# for overlap (GZMA, MMP.1, CXCL10, NTRK3, CXCL11) rename variables
+## ----------------------------#
+STRADL_LBC %<>%
+  rename(NTRK3_olink = NTRK3,
+         GZMA_olink = GZMA,
+         MMP.1_olink = MMP.1,
+         CXCL10_olink = CXCL10,
+         CXCL11_olink = CXCL11)
+
+
+######## n = 778
+# Merge KORA trained and STRADL_trained
+KORA_LBC_DNAm <- merge(STRADL_LBC, 
+                       STRADL_KORA, 
+                       by = "stradl_ID")
+
+# Merge DNAm data with covariates
+KORA_LBC_DNAm <- merge(KORA_LBC_DNAm, 
+                       STRADL_covariates, 
+                       by = "stradl_ID")
+
+
+
+## ----------------------------# 
+# LOADING AND CLEANING PROTEOMICS DATA
+## ----------------------------#
+
+
+## ----------------------------# 
+# SELECTING THE PROTEINS that match with n = 104 from a dataset of n = 1065
+## ----------------------------#
+
+select_proteins <- protein_data_only %>%
+  select(
+    stradl_ID,
+    # KORA trained 
+    ACY1    ,
+    ADAMTS13  ,
+    ADIPOQ,
+    AFM       ,
+    B2M      ,
+    BCAM     ,
+    BMP1   ,
+    `C4A|C4B` ,
+    C5      ,
+    C9        ,
+    CCL17     ,
+    CCL18     ,
+    CCL21    ,
+    CCL22    ,
+    CCL25  ,
+    CD163   ,
+    CD209   ,
+    CD48      ,
+    CD5L      ,
+    CHIT1     ,
+    CLEC11A  ,
+    CLEC11A.1,
+    CNTN4  ,
+    CRP     ,
+    CXCL10  ,
+    CXCL11    ,
+    EDA       ,
+    ENPP7     ,
+    ESM1     ,
+    F7       ,
+    FAP    ,
+    FCER2   ,
+    FCGR3B  ,
+    GHR       ,
+    GZMA ,
+    GNLY      ,
+    GP1BA     ,
+    HGFAC    ,
+    ICAM5  ,
+    IDUA    ,
+    IGFBP1  ,
+    IGFBP4    ,
+    IL19      ,
+    INSR      ,
+    LGALS3BP ,
+    LGALS4   ,
+    `LTA|LTB`,
+    LTF     ,
+    LY9     ,
+    LYZ       ,
+    MIA       ,
+    MMP1     ,
+    MMP12    ,
+    MMP2   ,
+    MMP9    ,
+    MPL     ,
+    MPO       ,
+    MRC2      ,
+    MST1      ,
+    NCAM1    ,
+    NOTCH1   ,
+    NTRK3  ,
+    OMD     ,
+    PAPPA   ,
+    PIGR      ,
+    PRSS2     ,
+    RARRES2   ,
+    RETN     ,
+    S100A9   ,
+    SELE   ,
+    SELL    ,
+    SEMA3E  ,
+    SERPINA3  ,
+    SERPIND1  ,
+    SHBG      ,
+    SLITRK5  ,
+    SPOCK2   ,
+    STC1   ,
+    THBS2   ,
+    TNFRSF17  ,
+    TNFRSF1B  ,
+    TPSB2     ,
+    VCAM1    ,
+    WFIKKN2,
+    
+    # LBC trained
+    
+    CRTAM    ,
+    EZR      ,
+    NMNAT1   ,
+    SMPD1    ,
+    CCL11    ,
+    CXCL9    ,
+    HGF      ,
+    OSM      ,
+    VEGFA
+    
+    #  FcRL2    , #NO PROTEIN EQUIVALENT
+    #  G.CSF    , #NO PROTEIN EQUIVALENT
+    #  GDF.8    , #NO PROTEIN EQUIVALENT
+    #  N.CDase  , #NO PROTEIN EQUIVALENT
+    #  NEP      , #NO PROTEIN EQUIVALENT
+    #  SIGLEC1  , #NO PROTEIN EQUIVALENT
+    #  SKR3     , #NO PROTEIN EQUIVALENT
+    #  CD6      , #NO PROTEIN EQUIVALENT
+    #  EN.RAGE  , #NO PROTEIN EQUIVALENT
+    #  FGF.21   , #NO PROTEIN EQUIVALENT
+    #  TGF.alpha, #NO PROTEIN EQUIVALENT
+  )
+
+# match with covariate data, n = 1065
+
+#select_proteins <- merge(STRADL_covariates,
+#                         select_proteins,
+#                         by = "stradl_ID")
+#
+
+# match with DNAm data + covariates, n = 778
+
+# signify as protein in order to merge with DNAm data
+PROTEOMICS_DATA <- select_proteins
+
+colnames(PROTEOMICS_DATA) <- paste(colnames(PROTEOMICS_DATA),
+                                   "proteomics",
+                                   sep="_")
+# rename stradl_ID
+PROTEOMICS_DATA %<>%
+  rename(stradl_ID = stradl_ID_proteomics)
+
+# merge with DNAm data + covariates, n = 778
+PROTEOMICS_DNAm_DATA <- merge(PROTEOMICS_DATA,
+                         KORA_LBC_DNAm,
+                         by = "stradl_ID")
+
+# examine data
+skimr::skim(PROTEOMICS_DNAm_DATA)
 
 ## ----------------------------# 
 # LOADING AND CLEANING NEUROIMAGING DATA
