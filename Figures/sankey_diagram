@@ -1,0 +1,66 @@
+// Enter Flows between Nodes, like this:
+//         Source [AMOUNT] Target
+
+N = 1188 STRADL subset of GS [1065] proteomic data
+
+N = 1188 STRADL subset of GS [123] missing proteomic data
+
+proteomic data [778] DNAm data
+
+proteomic data [287] missing DNAm data
+
+DNAm data [709] structural MRI
+
+DNAm data [69] missing structural MRI
+
+structural MRI [655] Standardised ICV
+structural MRI [5] missing whole brain 
+structural MRI [49] missing standardised ICV
+
+////
+N = 1188 STRADL subset of GS [2] [1065] proteomic data [2]
+
+N = 1188 STRADL subset of GS [2] [123] missing proteomic data [2]
+
+proteomic data [2] [778] DNAm data [2]
+
+proteomic data [2] [287] missing DNAm data [2]
+
+DNAm data [2] [709] structural MRI [2]
+
+DNAm data [2] [69] missing structural MRI [2]
+
+structural MRI [2] [702] estimated ICV
+structural MRI [2] [5] missing whole brain MRI
+
+
+[cog] STRADL subset of GS [1065] [cog] proteomic data
+
+[cog] STRADL subset of GS [123] [cog] missing proteomic data
+
+[cog] proteomic data [778] [cog] DNAm data
+
+[cog] proteomic data [287] [cog] missing DNAm data
+
+[cog] DNAm data [775] g, gf
+
+dMRI data [884] dMRI QC
+dMRI data [141] failed QC
+dMRI data [12] FA distortion or skeleton fit issues
+
+dMRI QC [680] dMRI & DNAm data
+
+// neuroimaging_2 [680] DTI
+
+// DTI [480] disease sensitivity
+
+
+
+//Standardised ICV [665] QC neuroimaging
+
+//QC neuroimaging [16] cortical measure missing 
+
+//QC neuroimaging [6] one major error /  multiple minor errors
+
+//QC neuroimaging [640] DTI data
+//DTI data [449] disease covariates
