@@ -688,8 +688,496 @@ ggplot(plot2,
 
 
 ### ----------------------------# 
-## PLOT individually then cocatenate 
+## PLOT individually then concatenate 
 ### ----------------------------#
+
+# Find out what colour
+scales::show_col(viridis::viridis(option = "G",
+                                  20))
+
+plot2 <- plot2 %>% filter(brain_metric == "g")
+
+##### for effect sizes plot
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#f3f1ff",
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(x = reorder(DNAm,-(estimate)),
+           y = estimate,
+           alpha = reorder(DNAm,
+                           (-estimate)),
+           shape = FDR_significance,
+           col = brain_metric,
+           group = omic_type,
+           # alpha = significance
+       )
+) +
+  
+  geom_point(position = position_dodge(width = 0.9),
+             size = 1.4,
+             #colour = "#414487FF",
+             stroke = 0.9) +
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  
+  theme(
+    axis.text.x = element_text(
+      size = 6),
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 7),
+    axis.title.x =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black"),
+    axis.title.y =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black")
+  ) +
+  
+  labs(y = "Standardized effect size",
+       x = "DNAm signature") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "lightgrey",
+    linetype = "dashed",
+    size = 0.3,
+    alpha = 0.5
+  ) +
+  
+  scale_colour_manual(values = c("#3f3770FF")) +
+  
+  scale_alpha_discrete(range = c(0.4, 1)) +
+  
+  scale_shape_manual(values = c(16, 
+                                5
+                                #16
+  )) +
+  facet_wrap( ~ brain_metric,
+              scales="free_y",
+              #scales = "free_y",
+              nrow = 1) +
+  facetSettings 
+
+### ----------------------------# 
+## PLOT individually then concatenate - gf
+### ----------------------------#
+
+# Find out what colour
+scales::show_col(viridis::viridis(option = "G",
+                                  20))
+
+plot2 <- plot %>% filter(significance == "Yes")
+plot2 <- plot2 %>% filter(brain_metric == "gf")
+
+##### for effect sizes plot
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#f3f1ff",
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(x = reorder(DNAm,-(estimate)),
+           y = estimate,
+           alpha = reorder(DNAm,
+                           (-estimate)),
+           shape = FDR_significance,
+           col = brain_metric,
+           group = omic_type,
+       )
+) +
+  
+  geom_point(position = position_dodge(width = 0.9),
+             size = 1.4,
+             stroke = 0.9) +
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  
+  theme(
+    axis.text.x = element_text(
+      size = 6),
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 7),
+    axis.title.x =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black"),
+    axis.title.y =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black")
+  ) +
+  
+  labs(y = "Standardized effect size",
+       x = "DNAm signature") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "lightgrey",
+    linetype = "dashed",
+    size = 0.3,
+    alpha = 0.5
+  ) +
+  
+  scale_colour_manual(values = c("#190E19FF")) +
+  
+  scale_alpha_discrete(range = c(0.4, 1)) +
+  
+  scale_shape_manual(values = c(16, 
+                                5
+                                #16
+  )) +
+  facet_wrap( ~ brain_metric,
+              scales="free_y",
+              #scales = "free_y",
+              nrow = 1) +
+  facetSettings 
+
+### ----------------------------# 
+## PLOT individually then concatenate - processing speed
+### ----------------------------#
+
+# Find out what colour
+
+plot2 <- plot %>% filter(significance == "Yes")
+plot2 <- plot2 %>% filter(brain_metric == "processing speed")
+
+##### for effect sizes plot
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#f3f1ff",
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(x = reorder(DNAm,-(estimate)),
+           y = estimate,
+           alpha = reorder(DNAm,
+                           (-estimate)),
+           shape = FDR_significance,
+           col = brain_metric,
+           group = omic_type,
+       )
+) +
+  
+  geom_point(position = position_dodge(width = 0.9),
+             size = 1.4,
+             stroke = 0.9) +
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  
+  theme(
+    axis.text.x = element_text(
+      size = 6),
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 7),
+    axis.title.x =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black"),
+    axis.title.y =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black")
+  ) +
+  
+  labs(y = "Standardized effect size",
+       x = "DNAm signature") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "lightgrey",
+    linetype = "dashed",
+    size = 0.3,
+    alpha = 0.5
+  ) +
+  
+  scale_colour_manual(values = c(
+    #"#414388FF"
+    "#3573A1FF")) +
+  
+  scale_alpha_discrete(range = c(0.4, 1)) +
+  
+  scale_shape_manual(values = c(16, 
+                                5
+                                #16
+  )) +
+  facet_wrap( ~ brain_metric,
+              scales="free_y",
+              #scales = "free_y",
+              nrow = 1) +
+  facetSettings 
+
+
+### ----------------------------# 
+## PLOT individually then concatenate - executive function
+### ----------------------------#
+
+
+plot2 <- plot %>% filter(significance == "Yes")
+plot2 <- plot2 %>% filter(brain_metric == "executive function")
+
+##### for effect sizes plot
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#f3f1ff",
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(x = reorder(DNAm,-(estimate)),
+           y = estimate,
+           alpha = reorder(DNAm,
+                           (-estimate)),
+           shape = FDR_significance,
+           col = brain_metric,
+           group = omic_type,
+       )
+) +
+  
+  geom_point(position = position_dodge(width = 0.9),
+             size = 1.4,
+             stroke = 0.9) +
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  
+  theme(
+    axis.text.x = element_text(
+      size = 6),
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 7),
+    axis.title.x =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black"),
+    axis.title.y =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black")
+  ) +
+  
+  labs(y = "Standardized effect size",
+       x = "DNAm signature") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "lightgrey",
+    linetype = "dashed",
+    size = 0.3,
+    alpha = 0.5
+  ) +
+  
+  scale_colour_manual(values = c("#35A0ABFF")) +
+  
+  scale_alpha_discrete(range = c(0.4, 1)) +
+  
+  scale_shape_manual(values = c(16, 
+                                5
+                                #16
+  )) +
+  facet_wrap( ~ brain_metric,
+              scales="free_y",
+              #scales = "free_y",
+              nrow = 1) +
+  facetSettings +
+  ylim(-0.3, 0.2)
+
+##
+
+### ----------------------------# 
+## PLOT individually then concatenate - executive function
+### ----------------------------#
+
+
+plot2 <- plot %>% filter(significance == "Yes")
+plot2 <- plot2 %>% filter(brain_metric == "verbal declarative memory")
+
+##### for effect sizes plot
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#f3f1ff",
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(x = reorder(DNAm,-(estimate)),
+           y = estimate,
+           alpha = reorder(DNAm,
+                           (-estimate)),
+           shape = FDR_significance,
+           col = brain_metric,
+           group = omic_type,
+       )
+) +
+  
+  geom_point(position = position_dodge(width = 0.9),
+             size = 1.4,
+             stroke = 0.9) +
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  
+  theme(
+    axis.text.x = element_text(
+      size = 6),
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 7),
+    axis.title.x =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black"),
+    axis.title.y =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black")
+  ) +
+  
+  labs(y = "Standardized effect size",
+       x = "DNAm signature") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "lightgrey",
+    linetype = "dashed",
+    size = 0.3,
+    alpha = 0.5
+  ) +
+  
+  scale_colour_manual(values = c("#46BEADFF")) +
+  
+  scale_alpha_discrete(range = c(0.4, 1)) +
+  
+  scale_shape_manual(values = c(16, 
+                                5
+                                #16
+  )) +
+  facet_wrap( ~ brain_metric,
+              scales="free_y",
+              #scales = "free_y",
+              nrow = 1) +
+  facetSettings +
+  ylim(-0.3, 0.2)
+
+##
 
 
 ### ----------------------------# 
