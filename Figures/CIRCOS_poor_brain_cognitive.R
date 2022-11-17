@@ -142,6 +142,8 @@ STRADL_FreeSurfer <- read.csv("STRADL_Measures_FreeSurfer_Main.csv")
 names(STRADL_FreeSurfer)[names(STRADL_FreeSurfer) == 'id'] <- 'stradl_ID'
 
 
+ROTEOMICS_DNAm_DATA <- read.csv("PROTEOMICS_DNAm_DATA.csv")
+
 # n =709
 Neuroimaging_DNAm <- merge(PROTEOMICS_DNAm_DATA, 
                            STRADL_FreeSurfer,
@@ -494,12 +496,12 @@ points.overflow.warning = FALSE
 
 
 #install.packages("colorspace")
-pal <- colorspace::sequential_hcl(41, palette = "SunsetDark")
 
 
 plasma_pal <- c(
   colorspace::sequential_hcl(44, palette = "SunsetDark"),
-  viridis::mako(n = 11)
+  #viridis::mako(n = 11)
+  colorspace::sequential_hcl(11, palette = "Purple-Blu")
   )
 
 
@@ -576,7 +578,7 @@ circos.trackPlotRegion(
       #adj = c(0, degree(5)), 
       niceFacing = TRUE,
       facing = "clockwise",
-      cex = 0.3
+      cex = 0.2
     )
     
     circos.rect(xleft=xlim[1], 
@@ -590,4 +592,322 @@ circos.trackPlotRegion(
   }
 )
 circos.clear()
+
+#######################
+# good brain health plot
+#######################
+
+plot2 <- rbind(plot_neuroimaging_methylation, plot_cognitive_methylation)
+
+##### For circos, certain associations that associate with POOR brain health neeed to be recoded
+plot2 <- plot2 %>% mutate(estimate =
+                            case_when(brain_metric == "relative brain age" ~ estimate*-1,
+                                      brain_metric == "gMD" ~ estimate*-1,
+                                      brain_metric == "WMH" ~ estimate*-1,
+                                      TRUE ~ estimate)
+)
+
+plot2 %<>% filter(significance == "Yes" & estimate > 0)
+
+####
+plot3 <- plot2 %>% select(DNAm, brain_metric, estimate)
+
+
+plot3 %<>% filter(brain_metric == "g" |
+                    brain_metric == "gf" |
+                    brain_metric == "processing speed" |
+                    brain_metric == "relative brain age" |
+                    brain_metric == "global subcortical volume" |
+                    brain_metric == "global cortical volume" |
+                    brain_metric == "WMH" |
+                    brain_metric == "gFA" |
+                    brain_metric == "gMD" |
+                    brain_metric == "global grey matter" |
+                    brain_metric == "global white matter" |
+                    brain_metric == "total brain volume" )
+
+
+plot3 %<>% 
+  dplyr::rename(
+    rowname = DNAm,
+    key = brain_metric,
+    value = estimate)
+
+plot3$rowname <- as.character(plot3$rowname)
+
+### arrange circos by size 
+### Which DNAm proxy has the most significant hits? 
+# Group by sum using dplyr
+test <- aggregate((plot3$value), 
+                  by=list(rowname=plot3$rowname), 
+                  FUN=sum) %>% 
+  #arrange((x))
+arrange(desc(x))
+
+test$rowname
+
+test$rowname <- as.factor(test$rowname)
+skimr::skim(test$rowname)
+#n=33
+
+#install.packages("circlize")
+#library(circlize)
+# parameters
+
+
+circos.clear()
+
+
+circos.par(gap.after = c("g" = 1.5,
+                         "gf" = 1,
+                         "processing speed" = 1,
+                         "relative brain age"= 1,
+                         "WMH" = 1,
+                         "total brain volume"= 1,
+                         "global grey matter"= 1,
+                         "global white matter"= 1,
+                         "global cortical volume"= 1,
+                         "global subcortical volume"= 1,
+                         "gMD"= 1,
+                         "gFA"= 1.5,
+                         
+                          "SEMA3E"   =0.1,   "NCAM1"  =0.1  ,   "NOTCH1"  =0.1 ,   "NTRK3"      =0.1, "NTRK3_olink" =0.1,"CNTN4"   =0.1,   
+                          "SLITRK5"  =0.1,   "SELL"   =0.1  ,   "TPSB2"   =0.1 ,   "OMD"        =0.1, "GDF.8"       =0.1,"WFIKKN2" =0.1,   
+                          "ADAMTS13" =0.1,   "ESM1"   =0.1  ,   "GP1BA"   =0.1 ,   "GZMA_olink" =0.1, "SPOCK2"      =0.1,"SHBG"    =0.1,   
+                          "GNLY"     =0.1,   "MRC2"   =0.1  ,   "EZR"     =0.1 ,   "INSR"       =0.1, "VCAM1"       =0.1,"FAP"     =0.1,   
+                          "FcRL2"    =0.1,   "CD163"  =0.1  ,   "TNFRSF1B"=0.1 ,   "MMP2"       =0.1, "CD209"       =0.1,"EDA"     =0.1,   
+                          "MPL"      =0.1,   "BCAM"   =0.1  ,   "CRTAM" =0.1
+                         
+                         
+),
+
+start.degree = 90, 
+gap.degree = 0.1, 
+track.margin = c(-0.1, 0.1), 
+points.overflow.warning = FALSE
+)
+#par(mar = rep(0, 4))
+#par(mfrow = c(1))
+#
+
+
+#install.packages("colorspace")
+
+
+
+plasma_pal <- c(
+  colorspace::sequential_hcl(33, palette = "BluYl"),
+  #viridis::mako(n = 11)
+  colorspace::sequential_hcl(11, palette = "Purple-Blu")
+)
+
+
+#pal2 <- colorspace::sequential_hcl(11, palette = "Purple-Blu")
+
+
+col_fun = function(x) ifelse(x < -0.07 | x > 0.07, colorspace::sequential_hcl(41, palette = "SunsetDark"), #
+                             "#ECECEC"
+                             # "#00000000"
+)
+
+
+# Base plot
+chordDiagram(
+  x = plot3, 
+  #big.gap = 30,
+  order = c(
+    
+    "SEMA3E"   ,   "NCAM1"    ,   "NOTCH1"   ,   "NTRK3"      , "NTRK3_olink" ,"CNTN4"   ,   
+    "SLITRK5"  ,   "SELL"     ,   "TPSB2"    ,   "OMD"        , "GDF.8"       ,"WFIKKN2" ,   
+    "ADAMTS13" ,   "ESM1"     ,   "GP1BA"    ,   "GZMA_olink" , "SPOCK2"      ,"SHBG"    ,   
+    "GNLY"     ,   "MRC2"     ,   "EZR"      ,   "INSR"       , "VCAM1"       ,"FAP"     ,   
+    "FcRL2"    ,   "CD163"    ,   "TNFRSF1B" ,   "MMP2"       , "CD209"       ,"EDA"     ,   
+    "MPL"      ,   "BCAM"     ,   "CRTAM" ,
+    
+    
+    "g",
+    "gf",
+    "processing speed",
+    "relative brain age",
+    "total brain volume",
+    "global grey matter",
+    "global white matter",
+    "global cortical volume",
+    "global subcortical volume",
+    "WMH",
+    
+    
+    "gMD" ,
+    "gFA"
+    
+    
+  ),
+  # col = col_fun,
+  grid.col = plasma_pal,
+  transparency = 0.25,
+  symmetric = TRUE,
+  #directional = 1,
+  #direction.type = c("arrows", "diffHeight"), 
+  #diffHeight  = -0.04,
+  annotationTrack = "grid", 
+  annotationTrackHeight = c(0.05, 0.1),
+  link.arr.type = "big.arrow", 
+  link.sort = TRUE 
+  #link.largest.ontop = TRUE
+)
+
+# Add text and axis
+circos.trackPlotRegion(
+  track.index = 1, 
+  bg.border = NA, 
+  panel.fun = function(x, y) {
+    
+    xlim = get.cell.meta.data("xlim")
+    sector.index = get.cell.meta.data("sector.index")
+    
+     # Add names to the sector. 
+     circos.text(
+       x = mean(xlim), 
+       y = 3.5, 
+       labels = sector.index, 
+       #adj = c(0, degree(5)), 
+       niceFacing = TRUE,
+       facing = "clockwise",
+       cex = 0.2
+     )
+    
+    circos.rect(xleft=xlim[1], 
+                ybottom=0.3, 
+                xright=xlim[2], 
+                ytop=0.32, 
+                col = "white", 
+                border = "white")
+    
+    
+  }
+)
+circos.clear()
+
+
+
+############
+
+
+plot2 <- rbind(plot_neuroimaging_methylation, plot_cognitive_methylation)
+
+##### For circos, certain associations that associate with POOR brain health neeed to be recoded
+plot2 <- plot2 %>% mutate(estimate =
+                            case_when(brain_metric == "relative brain age" ~ estimate*-1,
+                                      brain_metric == "gMD" ~ estimate*-1,
+                                      brain_metric == "WMH" ~ estimate*-1,
+                                      TRUE ~ estimate)
+)
+
+plot2 %<>% filter(significance == "Yes" & estimate < 0)
+
+####
+
+plot2 %<>% filter(brain_metric == "g" |
+                    brain_metric == "gf" |
+                    brain_metric == "processing speed" |
+                    brain_metric == "relative brain age" |
+                    brain_metric == "global subcortical volume" |
+                    brain_metric == "global cortical volume" |
+                    brain_metric == "WMH" |
+                    brain_metric == "gFA" |
+                    brain_metric == "gMD" |
+                    brain_metric == "global grey matter" |
+                    brain_metric == "global white matter" |
+                    brain_metric == "total brain volume" )
+
+
+
+
+##### for effect sizes plot
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#EAE3F2", #purple
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(
+         x = reorder(DNAm,(-estimate)),
+         y = estimate,
+         # alpha = reorder(DNAm,
+         #                 (-estimate)),
+         shape = FDR_significance,
+         #col = DNAm,
+         col = reorder(DNAm,
+                       (estimate)),
+         group = omic_type
+         # alpha = significance
+       )
+) +
+  
+  geom_point(position = position_dodge(width = 0.9),
+             size = 1.6,
+             stroke = 0.9) +
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  
+  theme(
+    axis.text.x = element_text(
+      size = 6),
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 7),
+    axis.title.x =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black"),
+    axis.title.y =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black")
+  ) +
+  
+  labs(y = "Standardized effect size",
+       x = "DNAm signature") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "lightgrey",
+    linetype = "dashed",
+    size = 0.3,
+    alpha = 0.5
+  ) +
+  
+  viridis::scale_color_viridis(discrete = TRUE,
+                               option = "F") +
+  
+  scale_shape_manual(values = c(1,
+                                16)
+  ) +
+  facet_wrap(~ brain_metric,
+             nrow = 1) +
+  facetSettings 
+
 
