@@ -277,7 +277,7 @@ newdf <- cbind(df, newcols) %>%
            case_when(pFDR < 0.05 ~ "Yes",
                      TRUE ~ "No")) %>%
   # Create a column to denote whether these are DNAm or proteins
-  mutate(omic_type = "DNAm")%>%
+  mutate(omic_type = "DNAm") %>%
  mutate(model = "Model 1 (n=709)")
 
 ###
@@ -998,5 +998,352 @@ ggplot(plot4,
              nrow = 1) +
   facetSettings 
 
+## ----------------------------# 
+# MODEL 4 - disease
+## ----------------------------#
 
+# n = 778
+Lifestyle_DNAm <- merge(PROTEOMICS_DNAm_DATA, 
+                        sensitivity_analysis_lifestyle,
+                        by = "stradl_ID")
+
+disease_covariates <- read.csv("Depression_Inflammation_DNAm_final.csv")
+
+## Add in some phenotypes for morbidity status
+names(disease_covariates)[names(disease_covariates) == 'ID'] <- 'GS_id'
+
+# Load ID linkages
+GS_link <- ID_link_attempt %>% select("stradl_ID", "GS_id")
+
+disease_covariates <- merge(GS_link, 
+                            disease_covariates,
+                            by = "GS_id")
+
+disease_covariates %<>% select(stradl_ID, 
+                               diabetes_Y, 
+                               #osteo_arthritis_Y, 
+                               rheum_arthritis_Y, 
+                               depression_Y,
+                               asthma_Y, COPD_Y, inflam_disease,
+                               CD8T,CD4T,NK, Bcell, Mono, Gran)
+
+### Clean up this disease data
+disease_covariates %<>% 
+  mutate(inflam_disease = case_when(
+    inflam_disease == 1 ~ 1,
+    inflam_disease == 2 ~ 1,
+    inflam_disease == 3 ~ 1,
+    TRUE ~ 0))
+
+
+#####
+Disease_DNAm <- merge(Lifestyle_DNAm, 
+                      disease_covariates,
+                      by = "stradl_ID")
+
+
+# N = 492
+Neuroimaging_DNAm_disease <- merge(Disease_DNAm, 
+                                   STRADL_FreeSurfer,
+                                   by = "stradl_ID")
+
+
+
+# Invert the polarity of these measures
+Neuroimaging_DNAm_disease %<>% mutate(gFA =
+                                        gFA*-1,
+                                      gMD = 
+                                        gMD*-1)
+
+
+Neuroimaging_DNAm_disease %<>% mutate(global_cortical_surface_area = 
+                                        hem.lh.csa + hem.rh.csa,
+                                      global_cortical_thickness = 
+                                        hem.lh.ct + hem.rh.ct,
+                                      global_cortical_volume = 
+                                        hem.lh.cv + hem.rh.cv,
+                                      global_subcortical_volume =
+                                        scv.bilat.accumbens + scv.bilat.amygdala + scv.bilat.caudate +
+                                        scv.bilat.hippocampus + scv.bilat.pallidum + scv.bilat.putamen +
+                                        scv.bilat.thalamus + scv.bilat.ventraldc) 
+
+
+# Converting multiple varibles into a factor
+Neuroimaging_DNAm_disease %<>% mutate_at(c("sex", "site", "edited", "batch",
+                                           "hypertension", "CurrentSmoker", "CurrentDrinker",
+                                           "diabetes_Y", 
+                                           "rheum_arthritis_Y", 
+                                           "depression_Y",
+                                           "asthma_Y", "COPD_Y", "inflam_disease"),
+                                         as.factor)
+
+# Making a data frame with all combinations of variables
+df <- as.data.frame(expand.grid(FULL_DNAm_list, FULL_neuroimaging_list, stringsAsFactors = F)) %>%
+  dplyr::rename(DNAm = Var1, metric = Var2)
+
+# Function to get summary values as tibble from a named list with the info on metric and DNAm
+
+get_summary_values <- function(list) {
+  metric <- list$metric
+  DNAm <- list$DNAm
+  tib <-
+    broom::tidy(summary(lm(
+      scale(Neuroimaging_DNAm_disease[[metric]]) ~ 
+        scale(st_age)
+      + sex
+      + site
+      + batch
+      + edited
+      
+      + hypertension
+      + CurrentSmoker
+      + CurrentDrinker
+      + scale(bmi)
+      
+      + diabetes_Y
+      + rheum_arthritis_Y
+      + depression_Y
+      + asthma_Y
+      + COPD_Y, 
+      + inflam_disease
+      #+ scale(whr)
+      
+      + scale(est.icv.BAD)
+      + scale(Neuroimaging_DNAm_disease[[DNAm]]),
+      data = Neuroimaging_DNAm_disease
+    )))[18, c(2, 3, 5)]
+  return(tib)
+}
+
+# Making 3 new columns to add to data frame, 1 is estimate, 1 is std. error, 1 is p.value
+newcols <- df %>%
+  split(1:nrow(.)) %>%
+  purrr::map_dfr(.f = get_summary_values)
+
+# Now bind on the 3 cols that were created
+newdf <- cbind(df, newcols) %>%
+  
+  # Create a neurimaging modality column
+  mutate(modality =
+           case_when(
+             metric == "global.cerebral.wm" ~ "global",
+             metric == "global.total.gm" ~ "global",
+             metric == "global.wbv" ~ "global",
+             
+             metric == "global_cortical_surface_area" ~ "cortical",
+             metric == "global_cortical_thickness"~ "cortical",
+             metric == "global_cortical_volume"~ "cortical",
+             metric == "global_subcortical_volume"~ "subcortical",
+             
+             metric == "gFA"~ "global",
+             metric == "gMD"~ "global",
+             metric == "Fazekas_Score_Total" ~ "global",
+             
+             TRUE ~ "misc")
+  ) %>%
+  
+  # Create a brain metric column
+  mutate(brain_metric =
+           case_when(
+             
+             ### Global
+             metric == "global.cerebral.wm" ~ "global white matter",
+             metric == "global.total.gm" ~ "global grey matter",
+             metric == "global.wbv" ~ "total brain volume",
+             
+             metric == "global_cortical_surface_area" ~ "global cortical surface area",
+             metric == "global_cortical_thickness"~ "global cortical thickness",
+             metric == "global_cortical_volume"~ "global cortical volume",
+             metric == "global_subcortical_volume"~ "global subcortical volume",
+             
+             metric == "gFA"~ "gFA",
+             metric == "gMD"~ "gMD",
+             
+             metric == "Fazekas_Score_Total" ~ "WMH",
+             
+             TRUE ~ "misc")
+  ) %>%
+  
+  # Create pFDR column
+  # group_by(metric, Hemisphere) %>%
+  group_by(brain_metric) %>%
+  mutate(pFDR = p.adjust(p.value, method = "fdr")) %>%
+  # Create a column to denote where there are significant hits 
+  mutate(significance =
+           case_when(p.value < 0.05 ~ "Yes",
+                     TRUE ~ "No")) %>%
+  # Create a column to denote where there are FDR significant hits 
+  mutate(FDR_significance =
+           case_when(pFDR < 0.05 ~ "Yes",
+                     TRUE ~ "No")) %>%
+  # Create a column to denote whether these are DNAm or proteins
+  mutate(omic_type = "DNAm") %>%
+  mutate(model = "Model 4 (n = 492) disease")
+
+###
+plot_neuroimaging_disease_methylation <- newdf
+
+
+
+## ----------------------------# 
+# COMBINE ANALYSES TABLES
+## ----------------------------#
+
+plot <- rbind(plot_neuroimaging_methylation,
+              plot_neuroimaging_ICV_methylation,
+              plot_neuroimaging_lifestyle_methylation,
+              plot_neuroimaging_disease_methylation)
+
+
+#plot %<>% filter(FDR_significance == "Yes")
+
+plot %<>% filter(brain_metric == "total brain volume" |
+                    brain_metric == "global grey matter" |
+                    brain_metric == "global white matter"| 
+                    brain_metric == "global cortical volume" |
+                    brain_metric == "global subcortical volume" |
+                    brain_metric == "gFA" |
+                    brain_metric == "gMD" |
+                    brain_metric == "WMH")
+
+##### REORDER cognitive by global then domains
+plot %<>% mutate(brain_metric =
+                    factor(
+                      brain_metric,
+                      levels = c(
+                        
+                        "total brain volume",
+                        "global grey matter",
+                        "global white matter",
+                        "global cortical volume",
+                        "global subcortical volume",
+                        "gFA",
+                        "gMD",
+                        "WMH"
+                      )
+                    ))
+
+
+
+#plot %<>% filter( brain_metric == "global grey matter")
+
+plot %<>% filter( DNAm == "MMP12" |
+                    DNAm == "PIGR" |
+                    DNAm == "IGFBP4" |
+                    DNAm == "THBS2" |
+                    DNAm == "VEGFA" |
+                    DNAm == "RARRES2" |
+                    DNAm == "SERPIND1" |
+                    DNAm == "SKR3" |
+                    DNAm == "CRP" |
+                    DNAm == "PRSS2" |
+                    DNAm == "FGF.21" |
+                    DNAm == "ICAM5" |
+                    DNAm == "MMP9" |
+                    DNAm == "TGF.alpha" |
+                    DNAm == "HGF" |
+                    DNAm == "CCL17" |
+                   # DNAm == "NTRK3_olink" |
+                    DNAm == "SELL" |
+                    DNAm == "GDF.8" |
+                    DNAm == "SEMA3E" |
+                    DNAm == "NOTCH1" |
+                    DNAm == "CNTN4" |
+                    DNAm == "NTRK3" |
+                    DNAm == "NCAM1" )
+
+
+##### for effect sizes plot
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#EAE3F2", #purple
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot,
+       
+       aes(
+         x = reorder(DNAm,(-estimate)),
+         y = estimate,
+         # alpha = reorder(DNAm,
+         #                 (-estimate)),
+         shape = model,
+         alpha = FDR_significance,
+         #col = DNAm,
+         col = reorder(DNAm,
+                       (estimate)),
+         group = model
+         # alpha = significance
+       )
+) +
+  
+  geom_point(position = position_dodge(width = 0.9),
+             size = 1.6,
+             stroke = 0.9) +
+  
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  coord_flip() +
+  #theme(legend.position = "none") +
+  guides(colour = "none") +
+  
+  theme(
+    axis.text.x = element_text(
+      size = 6),
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.y = element_text(size = 7),
+    axis.title.x =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black"),
+    axis.title.y =element_text(
+      size = 8,
+      face = "bold",
+      family = "sans",
+      colour = "black")
+  ) +
+  
+  labs(y = "Standardized effect size",
+       x = "DNAm signature") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "lightgrey",
+    linetype = "dashed",
+    size = 0.3,
+    alpha = 0.5
+  ) +
+  
+  viridis::scale_color_viridis(discrete = TRUE,
+                               option = "F") +
+  
+  scale_shape_manual(values = c(1,
+                                16,
+                                8,
+                                5)
+  ) +
+  facet_wrap(~ brain_metric,
+             nrow = 1
+             #scales="free",
+             #scales = "free_y"
+             ) +
+  facetSettings 
 
