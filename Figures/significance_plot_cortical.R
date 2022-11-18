@@ -9,6 +9,7 @@
 ##                (1) Creates supplementary table for pFDR significant cortical volume associations;
 ##                (2) Creates barplot for pFDR significant cortical volume associations facetted by whether they associate with lower or increased volumes
 ##
+##                packages needed are tidyverse & magrittr
 ## ---------------------------
 
 ######Load up neuroimaging full dataset & DNAm data (that was cleaned in data prep)
@@ -186,36 +187,43 @@ df <-
                 metric = Var2)
 
 # Function to get summary values as tibble from a named list with the info on metric and DNAm
-get_summary_values <- function(list) {
+model_output <- function(list) {
+  
   metric <- list$metric
   DNAm <- list$DNAm
-  tib <-
-    broom::tidy(summary(
-      lm(
-        scale(Neuroimaging_DNAm[[metric]]) ~
-          scale(st_age)
-        + sex
-        + site
-        + batch
-        + edited
-        + scale(est.icv.BAD)
-        + scale(Neuroimaging_DNAm[[DNAm]]),
-        data = Neuroimaging_DNAm
-      )
-    ))[8, c(2, 3, 5)]
-  return(tib)
+  
+  regression_summary <- summary(
+    lm(
+      scale(Neuroimaging_DNAm[[metric]]) ~
+        scale(st_age)
+      + sex
+      + site
+      + batch
+      + edited
+      + scale(est.icv.BAD)
+      + scale(Neuroimaging_DNAm[[DNAm]]),
+      data = Neuroimaging_DNAm
+    )
+  )
+  
+  regression_summary_tidy <- broom::tidy(regression_summary)
+  regression_summary_tidy_complete <- regression_summary_tidy %>% mutate(r2 = regression_summary$r.squared)
+  regression_summary_tidy_DNAm <- regression_summary_tidy_complete[8, c(2, 3, 5, 6)]
+  
+  return(regression_summary_tidy_DNAm)
+  
 }
 
 # Making 3 new columns to add to data frame, 1 is estimate, 1 is std. error, 1 is p.value
 newcols <- df %>%
   split(1:nrow(.)) %>%
-  purrr::map_dfr(.f = get_summary_values)
+  purrr::map_dfr(.f = model_output)
 
 # Now bind on the 3 cols that were created
 newdf <- cbind(df, newcols) %>%
-  
-  # Create a neurimaging modality column
-  mutate(modality = "cortical") %>%
+
+# Create a neurimaging modality column
+mutate(modality = "cortical") %>%
   
   # Create a brain metric column
   mutate(
@@ -285,7 +293,7 @@ plot_neuroimaging_methylation <- newdf
 # ----------------------------#
 # Table of significant cortical volume regressions for supplementary document
 # ----------------------------#
-table <- plot_neuroimaging_methylation %>%
+table_model1 <- plot_neuroimaging_methylation %>%
   filter(FDR_significance == "Yes") %>%
   group_by(DNAm, brain_metric) %>%
   arrange(brain_metric,
@@ -295,29 +303,17 @@ table <- plot_neuroimaging_methylation %>%
            estimate - (1.96 * std.error),
          CI_upper =
            estimate + (1.96 * std.error)) %>%
-  select(brain_metric, DNAm, estimate, CI_lower, CI_upper, p.value, pFDR)
+  select(brain_metric, DNAm, estimate, CI_lower, CI_upper, r2, p.value, pFDR)
 
 # ----------------------------#
-# Examine n number for this analysis
+# write to .csv
 # ----------------------------#
-Neuroimaging_DNAm %<>% mutate(global_cortical_volume =
-                                hem.lh.cv + hem.rh.cv)
 
-skimr::skim(Neuroimaging_DNAm$global_cortical_volume)
-
-write.csv(table, "cortical_volume_regressions_n709.csv")
+write.csv(table_model1, "cortical_volume_regressions_n709.csv")
 
 # ----------------------------#
-# Table of beta values
+# Examine which DNAm associate across multiple cortical regions
 # ----------------------------#
-table <- plot_neuroimaging_methylation %>%
-  filter(estimate < 0 & FDR_significance == "Yes") %>%
-  group_by(DNAm, brain_metric) %>%
-  select(brain_metric, DNAm, estimate, std.error, p.value, pFDR)
-#filter(DNAm == "MMP12")
-#arrange(estimate, groups = TRUE) %>%
-summarize(mean_estimate = mean(estimate, na.rm = TRUE))
-
 
 ### Which DNAm proxy has the most FDR significant hits?
 sigs <- plot_neuroimaging_methylation %>%
@@ -334,7 +330,6 @@ Top_hits_sigs <-
             FUN = sum) %>%
   arrange(desc(x)) %>%
   rename(n_pFDR = x)
-
 
 # ----------------------------#
 # PLOT - barplot of significant and FDR significant for good brain health measures
@@ -420,9 +415,7 @@ Poor_brain <- merge(Top_hits_Poor_brain_health,
   mutate(direction =
            "Decreased cortical volume")
 
-
 Significance_plot <- rbind(Poor_brain, Good_brain)
-
 
 # ----------------------------#
 # Code for Barplot of count of significant hits
@@ -482,5 +475,205 @@ ggplot(Significance_plot,
   
   scale_fill_manual(values = c(viridis::mako(n = 34))) +
   scale_colour_manual(values = c("#808080"))
+
+## ----------------------------# 
+# MODEL 3 - LIFESTYLE
+## ----------------------------#
+
+phenotypes_STRADL <- read.csv("phenotypes.csv")
+ID_link_attempt <- read.csv("STRADL_DNAm_target_REM_17April2020.csv")
+GS_link <- ID_link_attempt %>% select("stradl_ID", "GS_id")
+names(phenotypes_STRADL)[names(phenotypes_STRADL) == 'id'] <- 'GS_id'
+phenotypes_STRADL <- merge(GS_link, phenotypes_STRADL, by = "GS_id")
+
+
+sensitivity_analysis_lifestyle <- phenotypes_STRADL %>% select(stradl_ID, 
+                                                               units, 
+                                                               drink_status, 
+                                                               hypertension_category, 
+                                                               bmi, 
+                                                               whr, 
+                                                               body_fat)
+#STRADL_main_data
+### Clean up this lifestyle data
+sensitivity_analysis_lifestyle %<>% 
+  mutate(hypertension = case_when(
+    hypertension_category == 1 ~ 1,
+    hypertension_category == 2 ~ 1,
+    hypertension_category == 3 ~ 1,
+    TRUE ~ 0),
+    CurrentDrinker = case_when(
+      drink_status == 1 ~ 1,
+      TRUE ~ 0))
+
+# n = 778
+Lifestyle_DNAm <- merge(PROTEOMICS_DNAm_DATA, 
+                        sensitivity_analysis_lifestyle,
+                        by = "stradl_ID")
+
+#####
+Neuroimaging_DNAm_lifestyle <- merge(Lifestyle_DNAm, 
+                                     STRADL_FreeSurfer,
+                                     by = "stradl_ID")
+
+# Converting multiple varibles into a factor
+Neuroimaging_DNAm_lifestyle %<>% mutate_at(c("sex", "site", "edited", "batch",
+                                             "hypertension", "CurrentSmoker", "CurrentDrinker"),
+                                           as.factor)
+
+# Making a data frame with all combinations of variables
+df <- as.data.frame(expand.grid(FULL_DNAm_list, FULL_neuroimaging_list, stringsAsFactors = F)) %>%
+  dplyr::rename(DNAm = Var1, metric = Var2)
+
+# Function to get summary values as tibble from a named list with the info on metric and DNAm
+model_output <- function(list) {
   
+  metric <- list$metric
+  DNAm <- list$DNAm
+  
+  regression_summary <- summary(
+    lm(
+      scale(Neuroimaging_DNAm_lifestyle[[metric]]) ~ 
+        scale(st_age)
+      + sex
+      + site
+      + batch
+      + edited
+      
+      + hypertension
+      + CurrentSmoker
+      + CurrentDrinker
+      + scale(bmi)
+      
+      + scale(est.icv.BAD)
+      + scale(Neuroimaging_DNAm_lifestyle[[DNAm]]),
+      data = Neuroimaging_DNAm_lifestyle
+    )
+  )
+  
+  regression_summary_tidy <- broom::tidy(regression_summary)
+  regression_summary_tidy_complete <- regression_summary_tidy %>% mutate(r2 = regression_summary$r.squared)
+  regression_summary_tidy_DNAm <- regression_summary_tidy_complete[12, c(2, 3, 5, 6)]
+  
+  return(regression_summary_tidy_DNAm)
+  
+}
+
+# Making 3 new columns to add to data frame, 1 is estimate, 1 is std. error, 1 is p.value
+newcols <- df %>%
+  split(1:nrow(.)) %>%
+  purrr::map_dfr(.f = model_output)
+
+# Now bind on the 3 cols that were created
+newdf <- cbind(df, newcols) %>%
+  
+  # Create a neurimaging modality column
+  mutate(modality = "cortical") %>%
+  
+  # Create a brain metric column
+  mutate(
+    brain_metric =
+      case_when(
+        ### cortical
+        str_detect(metric, "bankssts") ~ "banks of superior temporal sulcus",
+        str_detect(metric, "caudalanteriorcingulate") ~ "caudal anterior cingulate",
+        str_detect(metric, "caudalmiddlefrontal") ~ "caudal middle frontal",
+        str_detect(metric, "cv.bilat.cuneus") ~ "cuneus",
+        str_detect(metric, "entorhinal") ~ "entorhinal",
+        str_detect(metric, "frontalpole") ~ "frontal pole",
+        str_detect(metric, "fusiform") ~ "fusiform",
+        str_detect(metric, "inferiorparietal") ~ "inferior parietal",
+        str_detect(metric, "inferiortemporal") ~ "inferior temporal",
+        str_detect(metric, "temporalpole") ~ "temporal pole",
+        str_detect(metric, "insula") ~ "insula",
+        str_detect(metric, "isthmuscingulate") ~ "isthmus cingulate",
+        str_detect(metric, "lateraloccipital") ~ "lateral occipital",
+        str_detect(metric, "lateralorbitofrontal") ~ "lateral orbitofrontal",
+        str_detect(metric, "lingual") ~ "lingual",
+        str_detect(metric, "medialorbitofrontal") ~ "medial orbitofrontal",
+        str_detect(metric, "middletemporal") ~ "middle temporal",
+        str_detect(metric, "paracentral") ~ "paracentral",
+        str_detect(metric, "precuneus") ~ "precuneus",
+        str_detect(metric, "parahippocampal") ~ "parahippocampal",
+        str_detect(metric, "parsopercularis") ~ "pars opercularis",
+        str_detect(metric, "parsorbitalis") ~ "pars orbitalis",
+        str_detect(metric, "parstriangularis") ~ "pars triangularis",
+        str_detect(metric, "pericalcarine") ~ "pericalcarine",
+        str_detect(metric, "postcentral") ~ "postcentral",
+        str_detect(metric, "posteriorcingulate") ~ "posterior cingulate",
+        str_detect(metric, "precentral") ~ "precentral",
+        str_detect(metric, "rostralanteriorcingulate") ~ "rostral anterior cingulate",
+        str_detect(metric, "rostralmiddlefrontal") ~ "rostral middle frontal",
+        str_detect(metric, "superiorfrontal") ~ "superior frontal",
+        str_detect(metric, "superiorparietal") ~ "superior parietal",
+        str_detect(metric, "superiortemporal") ~ "superior temporal",
+        str_detect(metric, "supramarginal") ~ "supra marginal",
+        str_detect(metric, "temporal pole") ~ "temporal pole",
+        str_detect(metric, "transversetemporal") ~ "transverse temporal",
+        
+        
+        TRUE ~ "misc"
+      )
+  ) %>%
+  
+  # Create pFDR column
+  # group_by(metric, Hemisphere) %>%
+  group_by(brain_metric) %>%
+  mutate(pFDR = p.adjust(p.value, method = "fdr")) %>%
+  # Create a column to denote where there are significant hits
+  mutate(significance =
+           case_when(p.value < 0.05 ~ "Yes",
+                     TRUE ~ "No")) %>%
+  # Create a column to denote where there are FDR significant hits
+  mutate(FDR_significance =
+           case_when(pFDR < 0.05 ~ "Yes",
+                     TRUE ~ "No")) %>%
+  # Create a column to denote whether these are DNAm or proteins
+  mutate(omic_type = "DNAm") %>%
+  mutate(model = "Model 3 Lifestyle (n=709)")
+
+###
+plot_neuroimaging_lifestyle_methylation <- newdf
+
+
+## ----------------------------# 
+# Combining both sets of models to see percentage attenuation
+## ----------------------------#
+
+add_on <- plot_neuroimaging_lifestyle_methylation %>% 
+  select(estimate, r2, p.value, pFDR) %>%
+  rename(estimate_lifestyle = estimate,
+         r2_lifestyle = r2,
+         p.value_lifestyle = p.value,
+         pFDR_lifestyle = pFDR
+  )
+
+add_on <- subset(add_on, select = -c(brain_metric))
+
+table_new <- cbind(plot_neuroimaging_methylation, add_on)
+
+table_new %<>% mutate(percentage_increase_decrease =
+                        100*(estimate - estimate_lifestyle)) %>%
+  filter(FDR_significance == "Yes" & estimate < 0) %>%
+  group_by(DNAm, brain_metric) %>%
+  arrange(brain_metric,
+          estimate,
+          by_group = TRUE) %>%
+  mutate(CI_lower =
+           estimate - (1.96 * std.error),
+         CI_upper =
+           estimate + (1.96 * std.error),
+         better_model = 
+           case_when(r2_lifestyle > r2 ~ "Yes",
+                     TRUE ~ "No")) %>%
+  select(brain_metric, DNAm, estimate, CI_lower, CI_upper, p.value, pFDR, 
+         estimate_lifestyle, r2, r2_lifestyle, better_model, p.value_lifestyle, 
+         pFDR_lifestyle, percentage_increase_decrease)
+
+
+range(table_new$r2)
+
+
+
+
 
