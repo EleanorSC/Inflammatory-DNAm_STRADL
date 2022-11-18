@@ -16,6 +16,8 @@
 ##  
 ## ----------------------------#
 
+
+
 FULL_DNAm_list <- c(
   "CRTAM"           ,
   "EZR"             ,
@@ -90,7 +92,7 @@ FULL_DNAm_list <- c(
   "SELE"           ,
   "MPL"            ,
   "B2M"            ,
-  "LTA|LTB"      ,
+  "LTA.LTB"      ,
   "CCL22"          ,
   "CCL17"          ,
   "ADIPOQ"         ,
@@ -104,7 +106,7 @@ FULL_DNAm_list <- c(
   "CRP"            ,
   "MST1"           ,
   "ENPP7"          ,
-  "C4A|C4B"        ,
+  "C4A.C4B"        ,
   "MMP12"          ,
   "NCAM1"          ,
   "CLEC11A.1"      ,
@@ -125,8 +127,9 @@ FULL_DNAm_list <- c(
   "S100A9"        ,
   "OMD"           ,
   "SEMA3E"        ,
-  "SPOCK2"
-)
+  "SPOCK2")
+
+
 
 
 ######Load up neuroimaging full dataset
@@ -182,13 +185,20 @@ FULL_neuroimaging_list <- c(
   
 )
 
+#
+#FULL_DNAm_list <- c("CRP", "IGFBP4","PIGR")
+#
+#FULL_neuroimaging_list <- c("cv.bilat.supramarginal",
+#                            "cv.bilat.temporalpole")
+
 # Converting multiple varibles into a factor
 Neuroimaging_DNAm %<>% mutate_at(c("sex", "site", "edited", "batch"),
                                  as.factor)
 
 # Making a data frame with all combinations of variables
 df <- as.data.frame(expand.grid(FULL_DNAm_list, FULL_neuroimaging_list, stringsAsFactors = F)) %>%
-  dplyr::rename(DNAm = Var1, metric = Var2)
+  dplyr::rename(DNAm = Var1, 
+                metric = Var2)
 
 # Function to get summary values as tibble from a named list with the info on metric and DNAm
 
@@ -290,10 +300,135 @@ plot2 <- plot_neuroimaging_methylation
 
 #plot2 %<>% filter(significance == "Yes")
 
-####
+
+### Define whether markers are good or bad for brain health
+
+plot2 %<>% mutate(direction =
+                    as.factor(case_when(estimate < 0 ~ "Bad",
+                              TRUE ~ "Good")))
 
 
-##### for effect sizes plot
+#### Only plot instances where DNAm signature has some significant associations
+
+plot2 %<>% filter(DNAm == "ADAMS13"|
+                    DNAm == "ADIPOQ"|
+                    DNAm == "BCAM"|
+                    DNAm == "BMP1"|
+                    DNAm == "C5"|
+                    DNAm == "C9"|
+                    DNAm == "CCL17"|
+                    DNAm == "CCL19"|
+                    DNAm == "CCL22"|
+                    DNAm == "CCL25"|
+                    DNAm == "CNTN4"|
+                    DNAm == "CRP"|
+                    DNAm == "ENPP7"|
+                    DNAm == "FAP"|
+                    DNAm == "FCER2"|
+                    DNAm == "FGF.21"|
+                    DNAm == "G.CSF"|
+                    DNAm == "GDF.8"|
+                    DNAm == "GNLY"|
+                    DNAm == "GZMA_olink"|
+                    DNAm == "HGF"|
+                    DNAm == "HGFAC"|
+                    DNAm == "ICAM5"|
+                    DNAm == "IGFBP4"|
+                    DNAm == "IL19"|
+                    DNAm == "LGALS3BP"|
+                    DNAm == "LTF"|
+                    DNAm == "MMP.1_olink"|
+                    DNAm == "MMP1"|
+                    DNAm == "MMP12"|
+                    DNAm == "MMP2"|
+                    DNAm == "MMP9"|
+                    DNAm == "MPL"|
+                    DNAm == "MPO"|
+                    DNAm == "MRC2"|
+                    DNAm == "MST1"|
+                    DNAm == "NCAM1"|
+                    DNAm == "NEP"|
+                    DNAm == "NOTCH1"|
+                    DNAm == "NTRK3"|
+                    DNAm == "NTRK3_olink"|
+                    DNAm == "OMD"|
+                    DNAm == "PIGR"|
+                    DNAm == "PRSS2"|
+                    DNAm == "RARRES2"|
+                    DNAm == "RETN"|
+                    DNAm == "SELL"|
+                    DNAm == "SEMA3E"|
+                    DNAm == "SERPIND1"|
+                    DNAm == "SKR3"|
+                    DNAm == "SLITRK5"|
+                    DNAm == "STC1"|
+                    DNAm == "THBS2"|
+                    DNAm == "VEGFA" 
+                    )
+
+# Only plot associations that associate with poor brain health outcomes
+
+#plot2 %<>% filter(direction == "Bad")
+#### Only plot instances where DNAm signature has some significant associations
+
+plot2 %<>% filter(
+                   #DNAm == "ADAMS13"|
+                   #DNAm == "ADIPOQ"|
+                    DNAm == "BCAM"|
+                   #DNAm == "BMP1"|
+                    DNAm == "C5"|
+                    DNAm == "C9"|
+                    DNAm == "CCL17"|
+                    DNAm == "CCL19"|
+                    DNAm == "CCL22"|
+                    #DNAm == "CCL25"|
+                    DNAm == "CNTN4"|
+                    DNAm == "CRP"|
+                    DNAm == "ENPP7"|
+                    #DNAm == "FAP"|
+                    #DNAm == "FCER2"|
+                    DNAm == "FGF.21"|
+                    DNAm == "G.CSF"|
+                    #DNAm == "GDF.8"|
+                    #DNAm == "GNLY"|
+                    #DNAm == "GZMA_olink"|
+                    DNAm == "HGF"|
+                    DNAm == "HGFAC"|
+                    DNAm == "ICAM5"|
+                    DNAm == "IGFBP4"|
+                    #DNAm == "IL19"|
+                    DNAm == "LGALS3BP"|
+                    DNAm == "LTF"|
+                    DNAm == "MMP.1_olink"|
+                    DNAm == "MMP1"|
+                    DNAm == "MMP12"|
+                    #DNAm == "MMP2"|
+                    DNAm == "MMP9"|
+                    #DNAm == "MPL"|
+                    DNAm == "MPO"|
+                    #DNAm == "MRC2"|
+                    DNAm == "MST1"|
+                    #DNAm == "NCAM1"|
+                    DNAm == "NEP"|
+                    #DNAm == "NOTCH1"|
+                    #DNAm == "NTRK3"|
+                    #DNAm == "NTRK3_olink"|
+                    #DNAm == "OMD"|
+                    DNAm == "PIGR"|
+                    DNAm == "PRSS2"|
+                    DNAm == "RARRES2"|
+                    #DNAm == "RETN"|
+                    #DNAm == "SELL"|
+                    #DNAm == "SEMA3E"|
+                    DNAm == "SERPIND1"|
+                    DNAm == "SKR3"|
+                    #DNAm == "SLITRK5"|
+                    DNAm == "STC1"|
+                    DNAm == "THBS2"|
+                    DNAm == "VEGFA" 
+)
+
+##### PHEWAS PLOT
 facetSettings <-
   theme(strip.background = element_rect(
     fill = "#EAE3F2", #purple
@@ -302,26 +437,47 @@ facetSettings <-
   ))
 
 
-ggplot(plot2, aes(x = brain_metric, 
-                 y = -log(p.value),
-                 shape = FDR_significance,
-                 alpha = significance,
-                 colour = DNAm
+viridis::rocket(n = 34)
+
+
+pals <- c(
+ "#03051AFF", "#0D0A21FF", "#170F28FF", "#221331FF" ,"#2E1739FF","#391A41FF",
+ "#451C47FF", "#511E4DFF", "#5E1F52FF", "#6A1F56FF" ,"#761F58FF","#841E5AFF",
+ "#921C5BFF", "#9E1A5BFF", "#AB185AFF", "#B91657FF" ,"#C51852FF","#D01E4DFF",
+ "#D92847FF", "#E23442FF", "#E8413EFF", "#ED513EFF" ,"#F06043FF","#F26E4CFF",
+ "#F47C56FF", "#F58A61FF", "#F5976EFF", "#F6A47BFF" ,"#F6B08AFF","#F6BC99FF",
+ "#03051AFF", "#0D0A21FF", "#170F28FF", "#221331FF" 
+# "#F7C9AAFF", "#F8D4BBFF", "#F9DFCBFF", "#FAEBDDFF"
 )
-) +
+
+
+ggplot(plot2,
+       aes(
+         x = reorder(DNAm, estimate),
+         y = -log(p.value),
+         shape = FDR_significance,
+         colour = brain_metric
+         # alpha = brain_metric,
+         #colour = DNAm
+       )) +
   
-  geom_point(
-    #aes(col = DNAm),
-             #size = -(estimate)
-             size = 1.2, 
-             alpha = 0.8
-             
-  ) +
+  geom_point(aes(#col = DNAm
+    alpha = brain_metric),
+    #size = -(estimate)
+    size = 1.2,
+    alpha = 0.8) +
   
   theme_classic() +
   
   theme(
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
     axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 6),
     panel.grid.minor = element_line(colour = "grey", linetype = "dashed"),
     axis.ticks = element_blank(),
     legend.position = "none"
@@ -329,125 +485,394 @@ ggplot(plot2, aes(x = brain_metric,
   
   labs(color = "Category",
        #size = "Effect size",
-       x = "neuroimaging metric",
-       y = "log(p-value)") +
+       x = "",
+       y = "") +
   
   ggrepel::geom_text_repel(
-    data = . %>% mutate(label = ifelse(p.value < 0.01, as.character(brain_metric), "")),
+    data = . %>% mutate(label = ifelse(p.value < 0.05, as.character(DNAm), "")),
     aes(label = label),
-    size = 3.1,
+    direction = "y",
+    size = 2,
     box.padding = unit(0.7, "lines"),
     max.overlaps = Inf
   ) +
   
-  geom_hline(
-    yintercept = -log(0.01),
-    color = "red",
-    size = 1,
-    alpha = 0.5
-  ) +
   
   geom_hline(
     yintercept = -log(0.05),
     color = "darkgrey",
     size = 1,
     alpha = 0.5
-  ) +  
-  facet_wrap(~ DNAm) +
+  ) +
+  
+  facet_wrap( ~ brain_metric,
+              scales = "free_x") +
+  
+  scale_shape_manual(values = c(16,
+                                8)) +
+  
+  scale_colour_manual(values = pals)
+
+# viridis::scale_color_viridis(discrete = TRUE,
+#                              option = "F")
+
+
+
+
+####### effect sizes plot
+# ----------------------------# 
+# PLOT 
+# ----------------------------#
+
+
+
+plot2 <- plot_neuroimaging_methylation
+
+plot2 %<>% filter(significance == "Yes")
+
+
+# Create a column to denote where there are FDR significant hits, significant, or not
+#plot2 %<>% mutate(SIG =
+#         case_when(FDR_significance == "Yes" ~ "pFDR",
+#                   significance == "Yes" ~ "p",
+#                   TRUE ~ "not_significant"))
+
+
+
+# ----------------------------# 
+# Reorder in terms of most significant hits 
+# ----------------------------#
+### Which DNAm proxy has the most significant hits?
+plot2 %<>%
+  mutate(number_significant =
+           case_when(significance == "No" ~ 0,
+                     TRUE ~ 1))
+
+# Group by sum using dplyr
+top_significant_hits <- aggregate(plot2$number_significant,
+                                  by = list(brain_metric = plot2$brain_metric),
+                                  FUN = sum)
+
+top_significant_hits %<>% arrange(desc(x))
+
+
+#####
+###### REORDER DNAm by no. sig
+plot2 %<>% mutate(brain_metric = factor(
+  brain_metric,
+  levels = c(
+                   "parahippocampal" , # n = 43
+                          "fusiform" , # n = 39
+                    "supra marginal" , # n = 31
+                 "inferior temporal" , # n = 27
+                 "superior parietal" , # n = 27
+                        "precentral" , # n = 25
+                 "superior temporal" , # n = 25
+                 "lateral occipital" , # n = 24
+             "lateral orbitofrontal" , # n = 22
+                            "insula" , # n = 20
+                       "postcentral" , # n = 20
+        "rostral anterior cingulate" , # n = 20
+                           "lingual" , # n = 19
+                        "entorhinal" , # n = 18
+                   "middle temporal" , # n = 18
+                         "precuneus" , # n = 18
+            "rostral middle frontal" , # n = 18
+               "transverse temporal" , # n = 18
+                 "inferior parietal" , # n = 16
+                    "pars orbitalis" , # n = 16
+               "posterior cingulate" , # n = 16
+ "banks of superior temporal sulcus" , # n = 15
+              "medial orbitofrontal" , # n = 14
+                      "frontal pole" , # n = 9
+             "caudal middle frontal" , # n = 7
+                       "paracentral" , # n = 7
+                  "pars opercularis" , # n = 7
+                  "superior frontal" , # n = 6
+                            "cuneus" , # n = 5
+                 "pars triangularis" , # n = 4
+                     "pericalcarine" , # n = 4
+                     "temporal pole" , # n = 4
+         "caudal anterior cingulate" , # n = 3
+                 "isthmus cingulate"  # n = 3
+  ))) 
+
+
+
+
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#F8EEEC",
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(
+         x = reorder(DNAm, -(estimate)),
+         y = estimate,
+         alpha = significance
+
+       )) +
+  
+  geom_point(
+    aes(
+      col = reorder(DNAm, (-estimate)),
+      alpha = significance,
+      #alpha = reorder(metric, -(estimate)),
+      shape = FDR_significance 
+    ),
+    size = 1.3,
+    position = position_dodge(width = 0.9),
+    stroke = 0.9
+  ) +
+  
+  
+  coord_flip() +
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  
+  theme(legend.position = "none",
+        
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.x = element_text(
+      #  angle = 90,
+      vjust = 0.5,
+      hjust = 1,
+      size = 6,
+      #face = "bold",
+      family = "sans"
+    ),
+    axis.text.y = element_text(size = 6)
+    #panel.grid.minor = element_line(colour = "grey", linetype = "dashed"),
+    
+  ) +
+  
+  labs(x = "",
+       y = "") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "darkgrey",
+    linetype = "dashed",
+    size = 0.2,
+    alpha = 0.5
+  ) +
   
   viridis::scale_color_viridis(discrete = TRUE,
-                               option = "F")
+                               option = "A",
+                               direction = -1) +
+  
+  
+facet_wrap( ~ brain_metric,
+            #scales="free"
+            scales = "free_y",
+            nrow = 5
+           # nrow = 1
+            ) +
+  facetSettings +
+  scale_alpha_manual(values=c(0.8, 1, 0.2)) +
+  scale_shape_manual(values = c(
+    # 8,
+    # 1,
+  #  1,
+    16,
+    5))
+
+
+# ----------------------------# 
+# PLOT 
+# ----------------------------#
+plot2 <- plot_neuroimaging_methylation
+
+plot2 %<>% filter(FDR_significance == "Yes")
+
+
+
+### Which DNAm proxy has the most FDR significant hits?
+plot2 %<>%
+  mutate(number_significant =
+           case_when(FDR_significance == "No" ~ 0,
+                     TRUE ~ 1))
+
+# Group by sum using dplyr
+top_significant_hits <- aggregate(plot2$number_significant,
+                                  by = list(brain_metric = plot2$brain_metric),
+                                  FUN = sum)
+
+top_significant_hits %<>% arrange(desc(x))
+
+
+#####
+###### REORDER DNAm by no. sig
+plot2 %<>% mutate(brain_metric = factor(
+  brain_metric,
+  levels = c(
+               "fusiform", #n = 15
+         "supra marginal", #n = 13
+      "superior parietal", #n = 10
+        "parahippocampal", #n =  8
+             "precentral", #n =  8
+      "inferior temporal", #n =  6
+              "precuneus", #n =  6
+      "superior temporal", #n =  6
+                 "insula", #n =  5
+ "rostral middle frontal", #n =  4
+             "entorhinal", #n =  3
+  "lateral orbitofrontal", #n =  3
+                "lingual" #n =  1
+  )))
 
 
 
 
+  
 
 
 
+facetSettings <-
+  theme(strip.background = element_rect(
+    fill = "#F8EEEC",
+    colour = "black",
+    size = 1
+  ))
+
+ggplot(plot2,
+       
+       aes(
+         x = reorder(DNAm, -(estimate)),
+         y = estimate
+       )) +
+  
+  geom_point(
+    aes(
+      col = reorder(DNAm, (-estimate)),
+      alpha = significance,
+      shape = FDR_significance 
+    ),
+    size = 1.3,
+    position = position_dodge(width = 0.9),
+    stroke = 0.9
+  ) +
+  
+  
+  coord_flip() +
+  geom_errorbar(
+    aes(
+      ymin = estimate - (1.96 * std.error),
+      ymax = estimate + (1.96 * std.error)
+    ),
+    position = position_dodge(0.9),
+    width = 0.4,
+    colour = "darkgrey",
+    alpha = 0.6,
+    size = 0.8
+  ) +
+  
+  theme_classic() +
+  
+  theme(legend.position = "none",
+        
+        strip.text = element_text(
+          size = 6,
+          face = "bold",
+          family = "sans",
+          colour = "black"
+        ),
+        axis.text.x = element_text(
+          #  angle = 90,
+          vjust = 0.5,
+          hjust = 1,
+          size = 6,
+          #face = "bold",
+          family = "sans"
+        ),
+        axis.text.y = element_text(size = 6)
+        
+  ) +
+  
+  labs(x = "",
+       y = "") +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "darkgrey",
+    linetype = "dashed",
+    size = 0.2,
+    alpha = 0.5
+  ) +
+  
+  viridis::scale_color_viridis(discrete = TRUE,
+                               option = "A",
+                               direction = -1) +
+  
+  
+  facet_wrap( ~ brain_metric,
+              
+              #scales = "free",
+              nrow = 2) +
+  
+  facetSettings +
+  scale_alpha_manual(values=c(0.8, 1, 0.2)) +
+  scale_shape_manual(values = c(5))
+
+
+# ----------------------------# 
+# PLOT - barplot of significant and FDR significant 
+# ----------------------------#
+plot2 <- plot_neuroimaging_methylation
+
+
+### Which DNAm proxy has the most FDR significant hits?
+plot2 %<>%
+  mutate(number_significant =
+           case_when(significance == "No" ~ 0,
+                     TRUE ~ 1))
+
+# Group by sum using dplyr
+top_significant_hits <- aggregate(plot2$number_significant,
+                                  by = list(brain_metric = plot2$brain_metric),
+                                  FUN = sum)
+
+top_significant_hits %<>% arrange(desc(x)) %>% rename(p = x)
+
+plot2 %<>%
+  mutate(number_significant_FDR =
+           case_when(FDR_significance == "No" ~ 0,
+                     TRUE ~ 1))
+
+# Group by sum using dplyr
+top_significant_hits_2 <- aggregate(plot2$number_significant_FDR,
+                                  by = list(brain_metric = plot2$brain_metric),
+                                  FUN = sum) %>% rename(pFDR = x)
+
+
+top_significant_hits <- merge(top_significant_hits,
+                              top_significant_hits_2, 
+                              by = "brain_metric")
+
+######
 
 
 
-
-
-#
-#ggplot(plot2,
-#       
-#       aes(
-#         x = reorder(DNAm,(-estimate)),
-#         y = estimate,
-#         # alpha = reorder(DNAm,
-#         #                 (-estimate)),
-#         shape = FDR_significance,
-#         #col = DNAm,
-#         col = reorder(DNAm,
-#                       (estimate)),
-#         group = omic_type
-#         # alpha = significance
-#       )
-#) +
-#  
-#  geom_point(position = position_dodge(width = 0.9),
-#             size = 1.6,
-#             stroke = 0.9) +
-#  
-#  geom_errorbar(
-#    aes(
-#      ymin = estimate - (1.96 * std.error),
-#      ymax = estimate + (1.96 * std.error)
-#    ),
-#    position = position_dodge(0.9),
-#    width = 0.4,
-#    colour = "darkgrey",
-#    alpha = 0.6,
-#    size = 0.8
-#  ) +
-#  
-#  theme_classic() +
-#  coord_flip() +
-#  theme(legend.position = "none") +
-#  
-#  theme(
-#    axis.text.x = element_text(
-#      size = 6),
-#    strip.text = element_text(
-#      size = 6,
-#      face = "bold",
-#      family = "sans",
-#      colour = "black"
-#    ),
-#    axis.text.y = element_text(size = 7),
-#    axis.title.x =element_text(
-#      size = 8,
-#      face = "bold",
-#      family = "sans",
-#      colour = "black"),
-#    axis.title.y =element_text(
-#      size = 8,
-#      face = "bold",
-#      family = "sans",
-#      colour = "black")
-#  ) +
-#  
-#  labs(y = "Standardized effect size",
-#       x = "DNAm signature") +
-#  
-#  geom_hline(
-#    yintercept = 0,
-#    color = "lightgrey",
-#    linetype = "dashed",
-#    size = 0.3,
-#    alpha = 0.5
-#  ) +
-#  
-#  viridis::scale_color_viridis(discrete = TRUE,
-#                               option = "F") +
-#  
-#  scale_shape_manual(values = c(1,
-#                                16)
-#  ) +
-#  facet_wrap(~ brain_metric,
-#             nrow = 1) +
-#  facetSettings 
-#
-#
-#
+ggplot(top_significant_hits,
+       aes(y = reorder(brain_metric, x),
+           x = x)) +
+  geom_bar(stat="identity")
