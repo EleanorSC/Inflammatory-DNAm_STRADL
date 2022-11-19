@@ -481,6 +481,10 @@ Neuroimaging_DNAm_lifestyle <- merge(Lifestyle_DNAm,
                                      STRADL_FreeSurfer,
                                      by = "stradl_ID")
 
+Neuroimaging_DNAm_lifestyle %<>% mutate(scv.cerebellum_GM =  vol.cerebellum.lh.gm + vol.cerebellum.rh.gm,
+                              scv.cerebellum_WM =  vol.cerebellum.lh.wm + vol.cerebellum.rh.wm)
+
+
 # Converting multiple varibles into a factor
 Neuroimaging_DNAm_lifestyle %<>% mutate_at(c("sex", "site", "edited", "batch",
                                              "hypertension", "CurrentSmoker", "CurrentDrinker"),
@@ -645,11 +649,12 @@ table_new %<>% mutate(percentage_increase_decrease =
 # write to .csv
 # ----------------------------#
 
-write.csv(table_new, "cortical_volume_regressions_both_models.csv")
+write.csv(table_new, "subcortical_volume_regressions_both_models.csv")
 
 
 table_pFDR <- table_new %>% filter(pFDR < 0.05)
 
+table_pFDR_lyf <- table_pFDR %>% filter(pFDR_lifestyle < 0.05)
 
 table_model1 <- plot_subcortical_methylation %>%
   filter(FDR_significance == "Yes" & estimate > 0)
