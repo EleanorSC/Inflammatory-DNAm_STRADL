@@ -9,6 +9,32 @@
 ##                (1) Creates supplementary table for pFDR significant cortical volume associations;
 ##                (2) Creates barplot for pFDR significant cortical volume associations facetted by whether they associate with lower or increased volumes
 ##
+##               
+##               
+##               ACR-Anterior corona radiata
+##               ALIC-Anterior limb of internal capsule
+##               BCC- Body of corpus callosum
+##               CC- Corpus callosum
+##               CGC- Cingulum (cingulate gyrus)
+##               CGH- Cingulum (hippocampus)
+##               CR- Corona radiata
+##               CST- Corticospinal tract
+##               EC- External capsule
+##               FX- Fornix (column and body of fornix)
+##               FXST- Fornix / Stria terminalis
+##               GCC- Genu of corpus callosum
+##               IC- Internal capsule
+##               IFO- Inferior fronto-occipital fasciculus
+##               PCR- Posterior corona radiata
+##               PLIC- Posterior limb of internal capsule
+##               PTR- Posterior thalamic radiation (include optic radiation)
+##               RLIC- Retrolenticular part of internal capsule
+##               SCC- Splenium of corpus callosum
+##               SCR- Superior corona radiata
+##               SFO- Superior fronto-occipital fasciculus     (could be a part of anterior internal capsule)
+##               SLF- Superior longitudinal fasciculus
+##               SS- Sagittal stratum (includes inferior longitidinal fasciculus and inferior fronto-occipital fasciculus)
+##               UNC- Uncinate fasciculus
 ## ---------------------------
 
 
@@ -829,6 +855,202 @@ newdf <- cbind(df, newcols) %>%
 
 ###
 plot_FA_methylation_lifestyle <- newdf
+
+
+##### MD lifestyle
+DTI_DNAm_MD_lifestyle <- merge(Lifestyle_DNAm, 
+                               STRADL_WM_tracts_MD,
+                               by = "stradl_ID")
+
+names(DTI_DNAm_MD_lifestyle)[names(DTI_DNAm_MD_lifestyle) == "FXST"] <- "FX.ST"
+
+# Making a data frame with all combinations of variables
+df <-
+  as.data.frame(expand.grid(FULL_DNAm_list, FULL_neuroimaging_list, stringsAsFactors = F)) %>%
+  dplyr::rename(DNAm = Var1,
+                metric = Var2)
+
+# Function to get summary values as tibble from a named list with the info on metric and DNAm
+model_output <- function(list) {
+  
+  metric <- list$metric
+  DNAm <- list$DNAm
+  
+  regression_summary <- summary(
+    lm(
+      scale(DTI_DNAm_MD_lifestyle[[metric]]) ~
+        scale(st_age)
+      + sex
+      + Site
+      
+      + hypertension
+      + CurrentSmoker
+      + CurrentDrinker
+      + scale(bmi)
+      
+      + scale(DTI_DNAm_MD_lifestyle[[DNAm]]),
+      data = DTI_DNAm_MD_lifestyle
+    )
+  )
+  
+  regression_summary_tidy <- broom::tidy(regression_summary)
+  regression_summary_tidy_complete <- regression_summary_tidy %>% mutate(r2 = regression_summary$r.squared)
+  regression_summary_tidy_DNAm <- regression_summary_tidy_complete[9, c(2, 3, 5, 6)]
+  
+  return(regression_summary_tidy_DNAm)
+  
+}
+
+# Making 3 new columns to add to data frame, 1 is estimate, 1 is std. error, 1 is p.value
+newcols <- (df) %>%
+  split(1:nrow(.)) %>%
+  purrr::map_dfr(.f = model_output)
+
+# Now bind on the 3 cols that were created
+newdf <- cbind(df, newcols) %>%
+  
+  # Create a neurimaging modality column
+  mutate(modality = "MD") %>%
+  
+  # Create a brain metric column
+  mutate(
+    brain_metric = metric) %>%
+  
+  # Create pFDR column
+  group_by(brain_metric, modality) %>%
+  mutate(pFDR = p.adjust(p.value, method = "fdr")) %>%
+  # Create a column to denote where there are significant hits
+  mutate(significance =
+           case_when(p.value < 0.05 ~ "Yes",
+                     TRUE ~ "No")) %>%
+  # Create a column to denote where there are FDR significant hits
+  mutate(FDR_significance =
+           case_when(pFDR < 0.05 ~ "Yes",
+                     TRUE ~ "No")) %>%
+  # Create a column to denote whether these are DNAm or proteins
+  mutate(omic_type = "DNAm") %>%
+  mutate(model = "Model 2 (n=683)")
+
+###
+plot_MD_methylation_lifestyle <- newdf
+####
+
+# ----------------------------#
+# write to .csv
+# ----------------------------#
+#### Supplementary:
+#plot_FA_methylation
+#plot_MD_methylation #(aka plot_DTI_m1)
+#plot_FA_methylation_lifestyle
+#plot_MD_methylation_lifestyle
+#plot_MD_proteins
+#plot_FA_proteins 
+
+# ----------------------------#
+# Combine cognitive and brain analyses
+# ----------------------------#
+plot_DTI_m1 <- rbind(plot_FA_methylation,
+                     plot_MD_methylation) %>%
+  select(DNAm,
+         brain_metric,
+         modality,
+         estimate,
+         std.error,
+         r2,
+         p.value,
+         pFDR) %>%
+  
+  #filter(p.value < 0.05)  %>%
+  unite(WM_tract_type, "brain_metric", "modality", "DNAm", remove = 'FALSE')
+
+plot_DTI_m2 <- rbind(plot_FA_methylation_lifestyle,
+                     plot_MD_methylation_lifestyle) %>%
+  unite(WM_tract_type, "brain_metric", "modality", "DNAm", remove = 'FALSE') %>%
+  select(WM_tract_type,
+         #DNAm,
+         brain_metric,
+         modality,
+         estimate,
+         std.error,
+         r2,
+         p.value,
+         pFDR) %>%
+  rename(
+    brain_metric_lifestyle = brain_metric, 
+    estimate_lifestyle = estimate,
+    modality_lifestyle = modality, 
+    r2_lifestyle = r2,
+    p.value_lifestyle = p.value,
+    pFDR_lifestyle = pFDR,
+    std.error_lifestyle = std.error
+  )
+
+DTI_table <- merge(plot_DTI_m1, plot_DTI_m2, by = "WM_tract_type")
+## ----------------------------#
+# Combining both sets of models to see percentage attenuation
+## ----------------------------#
+
+
+DTI_table_new <- DTI_table %>% mutate(percentage_increase_decrease =
+                                        100 * (estimate - estimate_lifestyle)) %>%
+  
+  # filter(FDR_significance == "Yes" & estimate < 0) %>%
+  
+  group_by(DNAm, brain_metric, modality) %>%
+  
+  arrange(brain_metric,
+          estimate,
+          by_group = TRUE) %>%
+  
+  mutate(
+    CI_lower =
+      estimate - (1.96 * std.error),
+    CI_upper =
+      estimate + (1.96 * std.error),
+    
+    CI_lower_lifestyle =
+      estimate_lifestyle - (1.96 * std.error_lifestyle),
+    CI_upper_lifestyle =
+      estimate_lifestyle + (1.96 * std.error_lifestyle),
+    
+    better_model =
+      case_when(r2_lifestyle > r2 ~ "Yes",
+                TRUE ~ "No")) %>%
+  select(
+    brain_metric,
+    DNAm,
+    modality,
+    # Model 1
+    estimate,
+    CI_lower,
+    CI_upper,
+    p.value,
+    pFDR,
+    # Model 2 
+    estimate_lifestyle,
+    CI_lower_lifestyle,
+    CI_upper_lifestyle,
+    p.value_lifestyle,
+    pFDR_lifestyle,
+    # R2
+    r2,
+    r2_lifestyle,
+    # better_model,
+    percentage_increase_decrease
+  ) %>% 
+  filter(
+    #p.value < 0.05
+    pFDR < 0.05
+  )
+# ----------------------------#
+# write to .csv
+# ----------------------------#
+
+write.csv(DTI_table_new, "DTI_methylation_baseline_lifestyle_regressions.csv")
+
+# ----------------------------#
+# write to .csv
+# ----------------------------#
 
 
 Poor_brain_health <- plot_FA_methylation_lifestyle %>% filter(significance == "Yes" & estimate < 0 & modality == "FA")
