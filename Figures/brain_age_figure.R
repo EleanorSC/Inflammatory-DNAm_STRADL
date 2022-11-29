@@ -585,10 +585,12 @@ model_output <- function(list) {
       scale(Neuroimaging_DNAm_lifestyle[[metric]]) ~
         scale(st_age)
       + sex
-      #+ site
-      #+ batch
-      #+ edited
-      #+ scale(est.icv.BAD)
+
+      + hypertension
+      + CurrentSmoker
+      + CurrentDrinker
+      + scale(bmi)
+      
       + scale(Neuroimaging_DNAm_lifestyle[[DNAm]]),
       data = Neuroimaging_DNAm_lifestyle
     )
@@ -596,7 +598,7 @@ model_output <- function(list) {
   
   regression_summary_tidy <- broom::tidy(regression_summary)
   regression_summary_tidy_complete <- regression_summary_tidy %>% mutate(r2 = regression_summary$r.squared)
-  regression_summary_tidy_DNAm <- regression_summary_tidy_complete[4, c(2, 3, 5, 6)]
+  regression_summary_tidy_DNAm <- regression_summary_tidy_complete[8, c(2, 3, 5, 6)]
   
   return(regression_summary_tidy_DNAm)
   
@@ -640,7 +642,7 @@ newdf <- cbind(df, newcols) %>%
                      TRUE ~ "No")) %>%
   # Create a column to denote whether these are DNAm or proteins
   mutate(omic_type = "DNAm") %>%
-  mutate(model = "Model 1 (n=709)")
+  mutate(model = "Model 3 lifestyle (n=709)")
 
 ###
 plot_brain_ageing_methylation_lifestyle <- newdf
@@ -661,10 +663,12 @@ model_output <- function(list) {
       scale(Neuroimaging_DNAm_lifestyle[[metric]]) ~
         scale(st_age)
       + sex
-      #+ site
-      #+ batch
-      #+ edited
-      #+ scale(est.icv.BAD)
+
+      + hypertension
+      + CurrentSmoker
+      + CurrentDrinker
+      + scale(bmi)
+      
       + scale(Neuroimaging_DNAm_lifestyle[[DNAm]]),
       data = Neuroimaging_DNAm_lifestyle
     )
@@ -672,7 +676,7 @@ model_output <- function(list) {
   
   regression_summary_tidy <- broom::tidy(regression_summary)
   regression_summary_tidy_complete <- regression_summary_tidy %>% mutate(r2 = regression_summary$r.squared)
-  regression_summary_tidy_DNAm <- regression_summary_tidy_complete[4, c(2, 3, 5, 6)]
+  regression_summary_tidy_DNAm <- regression_summary_tidy_complete[8, c(2, 3, 5, 6)]
   
   return(regression_summary_tidy_DNAm)
   
@@ -716,7 +720,7 @@ newdf <- cbind(df, newcols) %>%
                      TRUE ~ "No")) %>%
   # Create a column to denote whether these are DNAm or proteins
   mutate(omic_type = "proteomics") %>%
-  mutate(model = "Model 1 (n=709)")
+  mutate(model = "Model 3 lifestyle (n=709)")
 
 ###
 plot_brain_ageing_proteins_lifestyle <- newdf
@@ -724,11 +728,16 @@ plot_brain_ageing_proteins_lifestyle <- newdf
 # ----------------------------#
 # Supplementary table plot
 # ----------------------------#
+
+test1 <- plot_brain_ageing_methylation %>% filter(FDR_significance=="Yes" & brain_metric == "brain age")
+
+test <- plot_brain_ageing_methylation_lifestyle %>% filter(FDR_significance=="Yes" & brain_metric == "brain age")
+
 ## ----------------------------#
 # Combining both sets of models to see percentage attenuation
 ## ----------------------------#
 
-add_on <- plot_global_protein_lifestyle %>%
+plot_brain_ageing_methylation_lifestyle_table <- plot_brain_ageing_methylation_lifestyle %>%
   select(estimate, std.error, r2, p.value, pFDR) %>%
   rename(
     estimate_lifestyle = estimate,
@@ -738,21 +747,18 @@ add_on <- plot_global_protein_lifestyle %>%
     std.error_lifestyle = std.error
   )
 
-add_on <- subset(add_on, select = -c(brain_metric))
+plot_brain_ageing_methylation_lifestyle_table <- subset(plot_brain_ageing_methylation_lifestyle_table, select = -c(brain_metric, modality))
 
-table_new <- cbind(plot_global_protein, add_on)
+table_new <- cbind(plot_brain_ageing_methylation, plot_brain_ageing_methylation_lifestyle_table)
 
 table_new %<>% mutate(percentage_increase_decrease =
                         100 * (estimate - estimate_lifestyle)) %>%
   
-  # filter(FDR_significance == "Yes" & estimate < 0) %>%
-  # filter(significance == "Yes") %>%
+  filter(brain_metric == "brain age") %>%
   
-  group_by(DNAm, brain_metric) %>%
+  group_by(DNAm) %>%
   
-  
-  arrange(brain_metric,
-          estimate,
+  arrange(desc(estimate),
           by_group = TRUE) %>%
   
   mutate(
@@ -769,6 +775,9 @@ table_new %<>% mutate(percentage_increase_decrease =
     better_model =
       case_when(r2_lifestyle > r2 ~ "Yes",
                 TRUE ~ "No")) %>%
+  
+  filter(FDR_significance == "Yes") %>%
+  
   select(
     brain_metric,
     DNAm,
@@ -795,8 +804,12 @@ table_new %<>% mutate(percentage_increase_decrease =
 # ----------------------------#
 # write to .csv
 # ----------------------------#
+write.csv(table_new, "brain_age_methylation_models.csv")
 
 
+mean(abs(table_new$percentage_increase_decrease))
+
+test <- table_new %>% filter(pFDR_lifestyle < 0.05)
 # ----------------------------#
 # EFFECT SIZE RANGE PLOT
 # ----------------------------#
