@@ -1,9 +1,13 @@
 ## Brain age associations
+#write.csv(Neuroimaging_DNAm, "Neuroimaging_DNAm.csv")
+#write.csv(Neuroimaging_DNAm_lifestyle, "Neuroimaging_DNAm_lifestyle.csv")
+
+Neuroimaging_DNAm <- read.csv("Neuroimaging_DNAm.csv")
+Neuroimaging_DNAm_lifestyle <- read.csv("Neuroimaging_DNAm_lifestyle.csv")
 
 ## ---------------------------
 ## START plot multiple histograms 
 ## ----------------------------
-
 
 
 df <- Neuroimaging_DNAm %>% select(stradl_ID,
@@ -153,26 +157,127 @@ ggplot(data_long2,
   scale_fill_manual(values = c("#DCD0FF",
                                "#3E356BFF")) 
   
-  
-  
-#  scale_colour_manual(values = c("#3E356BFF",
-#                                 "#357BA2FF",
-#                                 "#49C1ADFF")) +
-#  
-#  scale_fill_manual(values = c("#3E356BFF",
-#                                 "#357BA2FF",
-#                                 "#49C1ADFF"))
-#
+### OVERLAP plot
 
-#viridis::scale_fill_viridis(discrete = TRUE,
-#                            option = "G",
-#                            direction = -1) +
-#  
-# viridis::scale_colour_viridis(discrete = TRUE,
-#                                option = "G",
-#                                direction = -1) +
 
-#values = c(viridis::mako(n = 5))
+ggplot(data_long2, 
+       aes(measurement, fill = age_metric)
+) + 
+  
+  geom_histogram(alpha = 0.5, 
+                 aes(y = ..density..), 
+                 #  binwidth = 30,
+                 position = 'identity') +
+  
+  geom_vline(data = msd, 
+             aes(xintercept = mean, 
+                 color = age_metric), 
+             size = 1,
+             alpha = 0.6
+  ) +
+  
+  labs (x = "age (years)",
+        y = "") +
+  
+  theme_classic() +
+  theme(
+    axis.title.x =
+      element_text(
+        size = 11,
+        face = "bold",
+        colour = "black",
+        family = "sans"
+      ),
+    
+    strip.text = element_text(
+      size = 10,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    
+    
+    axis.text.y = element_text(size = 9,
+                               colour = "black"
+                               
+    ),
+    
+    axis.text.x = element_text(size = 9,
+                               colour = "black"
+                               
+    ),
+    
+    axis.title.y = element_text(
+      size = 11,
+      face = "bold",
+      colour = "black",
+      family = "sans"
+    )
+  ) +
+  geom_density(alpha = 0.2) +
+  
+  scale_colour_manual(values = c("#9E9EE8",
+                                 "#3E356BFF")) +
+  
+  scale_fill_manual(values = c("#9E9EE8",
+                               "#3E356BFF")) 
+
+
+ggplot(Neuroimaging_DNAm, 
+       aes(FGF.21, brain_accel,
+           alpha = brain_accel
+           )
+) + geom_point(colour ="#3E356BFF") +
+  theme_classic() + geom_smooth(method = "lm",
+                                colour ="#9E9EE8",
+                                se=FALSE,
+                                alpha = 0.7) +
+  labs (x = "FGF.21",
+        y = "relative brain age") +
+  theme(
+    axis.title.y = element_text(
+      size = 11,
+      face = "bold",
+      colour = "black",
+      family = "sans"
+    ),
+    axis.title.x = element_text(
+      size = 11,
+      face = "bold",
+      colour = "black",
+      family = "sans"
+  )
+  )
+
+## CNTN4
+ggplot(Neuroimaging_DNAm, 
+       aes(SHBG, brain_accel,
+           alpha = brain_accel
+       )
+) + geom_point(colour ="#3EB489") +
+  theme_classic() + geom_smooth(method = "lm",
+                                colour ="#3EB489",
+                               # se=FALSE,
+                               fill = "#DBFFE4",
+                                alpha = 0.7) +
+  labs (x = "SHBG",
+        y = "relative brain age") +
+  theme(
+    axis.title.y = element_text(
+      size = 11,
+      face = "bold",
+      colour = "black",
+      family = "sans"
+    ),
+    axis.title.x = element_text(
+      size = 11,
+      face = "bold",
+      colour = "black",
+      family = "sans"
+    )
+  )
+
+
 ## ---------------------------
 ## END 
 ## ----------------------------
