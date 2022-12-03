@@ -584,7 +584,7 @@ plot_subcortical_lifestyle_methylation <- newdf
 # Combining both sets of models to see percentage attenuation
 ## ----------------------------#
 
-add_on <- plot_subcortical_lifestyle_methylation %>%
+plot_subcortical_lifestyle_methylation_table <- plot_subcortical_lifestyle_methylation %>%
   select(estimate, std.error, r2, p.value, pFDR) %>%
   rename(
     estimate_lifestyle = estimate,
@@ -594,15 +594,32 @@ add_on <- plot_subcortical_lifestyle_methylation %>%
     std.error_lifestyle = std.error
   )
 
-add_on <- subset(add_on, select = -c(brain_metric))
+plot_subcortical_lifestyle_methylation_table <- subset(plot_subcortical_lifestyle_methylation_table, select = -c(brain_metric))
 
-table_new <- cbind(plot_subcortical_methylation, add_on)
+table_new <- cbind(plot_subcortical_methylation, plot_subcortical_lifestyle_methylation_table)
 
-table_new %<>% mutate(percentage_increase_decrease =
-                        100 * (estimate - estimate_lifestyle)) %>%
-  
+
+table_new %<>% mutate(estimate2 = abs(estimate),
+                      estimate_lifestyle2 = abs(estimate_lifestyle),
+                      difference =
+                        case_when(
+                          (estimate2 > estimate_lifestyle2) ~ (estimate2 - estimate_lifestyle2),
+                          (estimate2 < estimate_lifestyle2) ~ (estimate_lifestyle2 - estimate2),
+                          TRUE ~ 0),
+                      percentage_increase_decrease = ((difference/estimate2)*100),
+                      increase_or_decrease = 
+                        case_when(
+                          (estimate2 > estimate_lifestyle2) ~ "Attenuation",
+                          (estimate2 < estimate_lifestyle2) ~ "Increase",
+                          TRUE ~ "misc" )
+                      ) %>%
+
+
+#table_new %<>% mutate(percentage_increase_decrease =
+#                        100 * (estimate - estimate_lifestyle)) %>%
+#  
   # filter(FDR_significance == "Yes" & estimate < 0) %>%
-  filter(significance == "Yes") %>%
+  #filter(significance == "Yes") %>%
   
   group_by(DNAm, brain_metric) %>%
   arrange(brain_metric,
@@ -623,6 +640,9 @@ table_new %<>% mutate(percentage_increase_decrease =
       case_when(r2_lifestyle > r2 ~ "Yes",
                 TRUE ~ "No")
   ) %>%
+  
+  filter(pFDR < 0.05) %>%
+  
   select(
     brain_metric,
     DNAm,
@@ -642,8 +662,12 @@ table_new %<>% mutate(percentage_increase_decrease =
     r2,
     r2_lifestyle,
     better_model,
+    increase_or_decrease,
     percentage_increase_decrease
   )
+
+table_new %<>% #group_by(brain_metric, DNAm) %>%
+  arrange(desc(estimate))
 
 # ----------------------------#
 # write to .csv
@@ -651,8 +675,17 @@ table_new %<>% mutate(percentage_increase_decrease =
 
 write.csv(table_new, "subcortical_volume_regressions_both_models.csv")
 
+# ----------------------------#
+# Writeup analysis
+# ----------------------------#
 
-table_pFDR <- table_new %>% filter(pFDR < 0.05)
+table_new_good <- table_new %>% filter(estimate > 0)
+mean(table_new_good$percentage_increase_decrease)
+
+table_new_poor_inc <- table_new %>% filter(estimate < 0 & increase_or_decrease == "Attenuation")
+mean(table_new_poor_inc$percentage_increase_decrease)
+
+table_pFDR <- table_new %>% filter(pFDR_lifestyle < 0.05)
 
 table_pFDR_lyf <- table_pFDR %>% filter(pFDR_lifestyle < 0.05)
 
