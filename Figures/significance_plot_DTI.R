@@ -991,8 +991,21 @@ DTI_table <- merge(plot_DTI_m1, plot_DTI_m2, by = "WM_tract_type")
 ## ----------------------------#
 
 
-DTI_table_new <- DTI_table %>% mutate(percentage_increase_decrease =
-                                        100 * (estimate - estimate_lifestyle)) %>%
+DTI_table_new <- DTI_table %>% 
+   mutate(estimate2 = abs(estimate),
+                        estimate_lifestyle2 = abs(estimate_lifestyle),
+                        difference =
+                          case_when(
+                            (estimate2 > estimate_lifestyle2) ~ (estimate2 - estimate_lifestyle2),
+                            (estimate2 < estimate_lifestyle2) ~ (estimate_lifestyle2 - estimate2),
+                            TRUE ~ 0),
+                        percentage_increase_decrease = ((difference/estimate2)*100),
+                        increase_or_decrease = 
+                          case_when(
+                            (estimate2 > estimate_lifestyle2) ~ "Attenuation",
+                            (estimate2 < estimate_lifestyle2) ~ "Increase",
+                            TRUE ~ "misc" )
+  ) %>%
   
   # filter(FDR_significance == "Yes" & estimate < 0) %>%
   
@@ -1036,12 +1049,30 @@ DTI_table_new <- DTI_table %>% mutate(percentage_increase_decrease =
     r2,
     r2_lifestyle,
     # better_model,
+    increase_or_decrease,
     percentage_increase_decrease
   ) %>% 
   filter(
     #p.value < 0.05
     pFDR < 0.05
   )
+
+#DTI_table_new %<>% #group_by(brain_metric, DNAm) %>%
+#  arrange(desc(estimate))
+
+
+# ----------------------------#
+# examining individual DNAm associations like SEMA3E....
+# ----------------------------#
+SEMA3E_DTI <- DTI_table_new %>% filter(DNAm == "SEMA3E")
+NTRK3_DTI <- DTI_table_new %>% filter(DNAm == "NTRK3")
+NCAM1_DTI <- DTI_table_new %>% filter(DNAm == "NCAM1")
+
+att_DTI <- DTI_table_new %>% filter(increase_or_decrease == "Attenuation")
+mean(att_DTI$percentage_increase_decrease)
+
+lyf_DTI <- DTI_table_new %>% filter(pFDR_lifestyle <0.05)
+
 # ----------------------------#
 # write to .csv
 # ----------------------------#
@@ -1051,6 +1082,164 @@ write.csv(DTI_table_new, "DTI_methylation_baseline_lifestyle_regressions.csv")
 # ----------------------------#
 # write to .csv
 # ----------------------------#
+
+################ DNAm hits plot
+Poor_brain_health_FA <- plot_DTI_m1 %>% filter(p.value < 0.05 & estimate < 0 & modality == "FA")
+
+### Which DNAm proxy has the most FDR significant hits?
+Poor_brain_health_FA %<>%
+  mutate(number_significant =
+           case_when(p.value > 0.05 ~ 0,
+                     TRUE ~ 1))
+
+# Group by sum using dplyr
+Top_hits_Poor_brain_health <-
+  aggregate(
+    Poor_brain_health_FA$number_significant,
+    by = list(DNAm = Poor_brain_health_FA$DNAm),
+    FUN = sum
+  )
+
+Top_hits_Poor_brain_health %<>% arrange(desc(x)) %>% rename(n_p = x)
+
+# Run FDR
+Poor_brain_health_FA %<>%
+  mutate(number_significant_FDR =
+           case_when(pFDR > 0.05 ~ 0,
+                     TRUE ~ 1))
+
+# Group by sum using dplyr
+Top_hits_Poor_brain_health_2 <-
+  aggregate(
+    Poor_brain_health_FA$number_significant_FDR,
+    by = list(DNAm = Poor_brain_health_FA$DNAm),
+    FUN = sum
+  ) %>% rename(n_pFDR = x)
+
+
+Poor_brain_FA <- merge(Top_hits_Poor_brain_health,
+                    Top_hits_Poor_brain_health_2,
+                    by = "DNAm") %>%
+  mutate(direction =
+           "Lower FA")
+
+##MD
+Poor_brain_health_MD <- plot_DTI_m1 %>% filter(p.value < 0.05 & estimate > 0 & modality == "MD")
+
+### Which DNAm proxy has the most FDR significant hits?
+Poor_brain_health_MD %<>%
+  mutate(number_significant =
+           case_when(p.value > 0.05 ~ 0,
+                     TRUE ~ 1))
+
+# Group by sum using dplyr
+Top_hits_Poor_brain_health <-
+  aggregate(
+    Poor_brain_health_MD$number_significant,
+    by = list(DNAm = Poor_brain_health_MD$DNAm),
+    FUN = sum
+  )
+
+Top_hits_Poor_brain_health %<>% arrange(desc(x)) %>% rename(n_p = x)
+
+# Run FDR
+Poor_brain_health_MD %<>%
+  mutate(number_significant_FDR =
+           case_when(pFDR > 0.05 ~ 0,
+                     TRUE ~ 1))
+
+# Group by sum using dplyr
+Top_hits_Poor_brain_health_2 <-
+  aggregate(
+    Poor_brain_health_MD$number_significant_FDR,
+    by = list(DNAm = Poor_brain_health_MD$DNAm),
+    FUN = sum
+  ) %>% rename(n_pFDR = x)
+
+
+Poor_brain_MD <- merge(Top_hits_Poor_brain_health,
+                       Top_hits_Poor_brain_health_2,
+                       by = "DNAm") %>%
+  mutate(direction =
+           "higher MD")
+
+Significance_plot <- rbind(Poor_brain_FA,
+                           Poor_brain_MD) %>%
+  mutate(DNAm = stringr::str_replace(DNAm, "_olink", ".x")) 
+
+# ----------------------------#
+# Code for Barplot of count of significant hits
+# ----------------------------#
+#Significance_plot %<>%
+
+
+####
+ggplot(Significance_plot,
+       
+       aes(
+         y = reorder(DNAm, n_pFDR),
+         x = n_p)
+       ) +
+  
+  
+  geom_col(aes(
+    y = reorder(DNAm, n_pFDR),
+    x = n_p,
+    fill = reorder(DNAm, n_pFDR)
+  )) +
+  
+  geom_col(aes(
+    y = reorder(DNAm, n_pFDR),
+    x = n_pFDR,
+    colour = c("grey"),
+    alpha = 0.95
+  )) +
+  
+  
+  theme_classic() +
+  
+  theme(
+    legend.position = "none",
+    
+    strip.text = element_text(
+      size = 6,
+      face = "bold",
+      family = "sans",
+      colour = "black"
+    ),
+    axis.text.x = element_text(
+      vjust = 0.5,
+      hjust = 1,
+      size = 6,
+      family = "sans"
+    ),
+    axis.text.y = element_text(size = 6),
+    axis.title.y = element_text(
+      size = 7,
+      face = "bold",
+      family = "sans"
+    ),
+    axis.title.x = element_text(
+      size = 7,
+      face = "bold",
+      family = "sans"
+    )
+  ) +
+  
+  labs(x = "number of significant assocations with regional tract DTI measures ",
+       y = "DNAm signatures") +
+  
+  facet_wrap( ~ direction) +
+  scale_fill_manual(values = c(
+    # viridis::magma(n = 19)
+    #colorspace::qualitative_hcl(24, palette = "Cold") 
+    colorspace::sequential_hcl(58, palette = "Purple-Blu") 
+    #colorspace::sequential_hcl(24, palette = "SunsetDark")
+  )) +
+  scale_colour_manual(values = c("#808080")) 
+  #xlim(0, 22)
+
+#################################
 
 
 Poor_brain_health <- plot_FA_methylation_lifestyle %>% filter(significance == "Yes" & estimate < 0 & modality == "FA")
